@@ -552,13 +552,114 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
 </div>
 
 <script>
+const API = 'https://script.google.com/macros/s/AKfycbzS_rdKWmc6rS17oIcfPZ0U7lz0XzgN4qirR9w7mKBKsPwUGI1pf3S0XVmNt5sJfQ/exec';
+
 let D = JSON.parse(localStorage.getItem('wt-v4') || '{}');
 if (!D.projects)    D.projects    = [];
 if (!D.categories)  D.categories  = ['品牌設計','UI/UX','插畫','動態設計','印刷','其他'];
 if (!D.advertisers) D.advertisers = [];
 if (!D.placements)  D.placements  = ['IG','FB','YouTube','TikTok','LINE','官網'];
 if (!D.salesreps)   D.salesreps   = [];
-function save() { localStorage.setItem('wt-v4', JSON.stringify(D)); }
+
+/* 本地儲存 */
+function saveLocal() { localStorage.setItem('wt-v4', JSON.stringify(D)); }
+
+/* 同步狀態指示 */
+function showSyncStatus(msg, ok=true) {
+  let el = document.getElementById('syncStatus');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'syncStatus';
+    el.style.cssText = 'position:fixed;bottom:5rem;right:2rem;font-family:"DM Mono",monospace;font-size:0.62rem;padding:0.35rem 0.8rem;border-radius:2px;z-index:300;transition:opacity 0.4s;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.background = ok ? '#d5e8d4' : '#fad5ee';
+  el.style.color = ok ? '#3a7a35' : '#c04090';
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.opacity = '0', 2500);
+}
+
+/* 推送單一專案到 Sheets */
+async function pushProject(project) {
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', project })
+    });
+    showSyncStatus('✓ 已同步');
+  } catch { showSyncStatus('⚠ 同步失敗', false); }
+}
+
+/* 從 Sheets 刪除專案 */
+async function deleteFromSheets(id) {
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete', id })
+    });
+  } catch {}
+}
+
+/* 同步 meta（categories / advertisers / placements / salesreps）*/
+async function pushMeta() {
+  try {
+    await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveMeta', meta: {
+        categories: D.categories,
+        advertisers: D.advertisers,
+        placements: D.placements,
+        salesreps: D.salesreps
+      }})
+    });
+  } catch {}
+}
+
+/* 主要 save 函式 — 本地 + 雲端 */
+function save(project=null) {
+  saveLocal();
+  if (project) { pushProject(project); }
+  pushMeta();
+}
+
+/* 初始載入：優先從 Sheets 拉資料 */
+async function loadFromSheets() {
+  showSyncStatus('⟳ 載入中…', true);
+  try {
+    const res = await fetch(API);
+    const json = await res.json();
+    if (json.ok && json.data.length > 0) {
+      D.projects = json.data.map(row => ({
+        ...row,
+        id: Number(row.id),
+        createdAt: Number(row.createdAt),
+        segments: Array.isArray(row.segments) ? row.segments : [],
+        placements: Array.isArray(row.placements) ? row.placements : [],
+      }));
+      saveLocal();
+    }
+    // load meta
+    const metaRes = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getMeta' })
+    });
+    const metaJson = await metaRes.json();
+    if (metaJson.ok && metaJson.meta) {
+      const m = metaJson.meta;
+      if (m.categories?.length)  D.categories  = m.categories;
+      if (m.advertisers?.length) D.advertisers = m.advertisers;
+      if (m.placements?.length)  D.placements  = m.placements;
+      if (m.salesreps?.length)   D.salesreps   = m.salesreps;
+      saveLocal();
+    }
+    showSyncStatus('✓ 資料已載入');
+  } catch {
+    showSyncStatus('⚠ 無法連線，使用本地資料', false);
+  }
+  renderHome(); renderMonthly(); renderReview(); renderCatList(); renderAdvList(); renderPlList();
+}
 
 const now = new Date();
 let curYear = now.getFullYear(), curMonth = now.getMonth()+1;
@@ -813,7 +914,7 @@ function adjustPlQty(projId, idx, delta) {
 function removePlTag(projId, idx) {
   const p=D.projects.find(p=>p.id===projId); if(!p) return;
   if(!p.placements) return;
-  p.placements.splice(idx,1); save();
+  p.placements.splice(idx,1); save(p);
   const el=document.getElementById(`pl-rows-${projId}`); if(el) el.innerHTML=renderPlRows(p);
   renderMonthly();
 }
@@ -828,7 +929,7 @@ function addPlTag(projId) {
   const existing=p.placements.find(t=>t.name===name);
   if(existing){ existing.qty+=qty; } else { p.placements.push({name,qty}); }
   if(!D.placements.includes(name)){ D.placements.push(name); }
-  save(); nameEl.value=''; if(qtyEl) qtyEl.value='1';
+  save(p); nameEl.value=''; if(qtyEl) qtyEl.value='1';
   const el=document.getElementById(`pl-rows-${projId}`); if(el) el.innerHTML=renderPlRows(p);
   document.getElementById(`pl-dd-${projId}`)?.classList.remove('open');
   renderMonthly();
@@ -876,7 +977,7 @@ function addProject(){
   const adv=document.getElementById('new-adv').value.trim();
   const rep=document.getElementById('new-rep').value.trim();
   const p={id:Date.now(),name,cat,adv,rep,status:document.getElementById('new-status').value,createdAt:Date.now(),segments:[]};
-  D.projects.unshift(p); save();
+  D.projects.unshift(p); save(p);
   document.getElementById('new-name').value='';
   document.getElementById('new-cat').value='';
   document.getElementById('new-adv').value='';
@@ -904,7 +1005,8 @@ function deleteProject(id){
   showConfirm('確定刪除案件？', `「${p.name}」刪除後無法復原，包含所有時段紀錄。`, ()=>{
     D.projects=D.projects.filter(p=>p.id!==id);
     if(openId===id) openId=null;
-    save(); renderHome(); renderReview(); renderMonthly();
+    saveLocal(); deleteFromSheets(id); pushMeta();
+    renderHome(); renderReview(); renderMonthly();
   });
 }
 /* COPY PROJECT */
@@ -931,12 +1033,12 @@ function fillToday(id) {
 
 function saveDetail(id, field, value) {
   const p=D.projects.find(p=>p.id===id); if(!p) return;
-  p[field]=value; save();
+  p[field]=value; save(p);
 }
 
 function saveField(id, field, value) {
   const p=D.projects.find(p=>p.id===id); if(!p) return;
-  p[field]=value; save(); renderReview(); renderMonthly();
+  p[field]=value; save(p); renderReview(); renderMonthly();
   // update status select color instantly without full re-render
   if(field==='status'){
     const sel=event.target;
@@ -957,9 +1059,9 @@ function addSeg(id){
   if(!date||!start||!end){alert('請填寫日期、開始與結束時間');return;}
   if(segHours({date,start,end})<=0){alert('結束時間須晚於開始時間');return;}
   const type=document.querySelector(`#seg-type-${id} .st-active`)?.dataset.type||'make';
-  if(!p.segments)p.segments=[]; p.segments.push({date,start,end,type}); save(); openId=id; renderHome(); renderReview(); renderMonthly();
+  if(!p.segments)p.segments=[]; p.segments.push({date,start,end,type}); save(p); openId=id; renderHome(); renderReview(); renderMonthly();
 }
-function deleteSeg(projId,segIdx){ const p=D.projects.find(p=>p.id===projId); if(!p)return; p.segments.splice(segIdx,1); save(); openId=projId; renderHome(); renderReview(); renderMonthly(); }
+function deleteSeg(projId,segIdx){ const p=D.projects.find(p=>p.id===projId); if(!p)return; p.segments.splice(segIdx,1); save(p); openId=projId; renderHome(); renderReview(); renderMonthly(); }
 
 function setSegType(id, type, btn) {
   document.querySelectorAll(`#seg-type-${id} .seg-type-btn`).forEach(b=>b.classList.remove('st-active','st-rev'));
@@ -1156,7 +1258,7 @@ function saveModal(){
   p.status=document.getElementById('m-status').value;
   const dateVal=document.getElementById('m-date').value;
   if(dateVal){ const d=new Date(dateVal+'T00:00:00'); if(!isNaN(d)) p.createdAt=d.getTime(); }
-  save(); closeModal(); openId=editingId; renderHome(); renderReview(); renderMonthly();
+  save(p); closeModal(); openId=editingId; renderHome(); renderReview(); renderMonthly();
 }
 
 /* MODAL AUTOCOMPLETE */
@@ -1407,7 +1509,7 @@ window.addEventListener('scroll',()=>{
   if(btn) btn.classList.toggle('visible', window.scrollY>300);
 });
 
-initSelectors(); populateSelects(); renderHome(); renderMonthly(); renderReview(); renderCatList(); renderAdvList(); renderPlList();
+initSelectors(); populateSelects(); loadFromSheets();
 </script>
 </body>
 </html>
