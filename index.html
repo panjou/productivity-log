@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Productivity Log</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #333333; --paper: #f7f8f8; --cream: #eaeaea;
+  --accent: #e86bb4; --accent-light: #fad5ee;
+  --muted: #888888; --border: #f5c2fb; --hover: #F5C2FB;
+}
+body { background: var(--paper); color: var(--ink); font-family: 'Noto Sans TC', sans-serif; font-weight: 300; min-height: 100vh; }
+.shell { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 2rem 6rem; }
+header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.brand-title { font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem, 3.5vw, 2.6rem); line-height: 1; letter-spacing: -0.02em; }
+.brand-sub { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 0.3rem; }
+.month-selector { display: flex; align-items: center; gap: 0.6rem; background: var(--cream); border: 1px solid var(--border); padding: 0.45rem 0.9rem; }
+.month-selector select { background: none; border: none; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--ink); cursor: pointer; outline: none; }
+.month-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.tabs { display: flex; margin: 2rem 0 0; border-bottom: 1px solid var(--border); }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 0.7rem 1.4rem 0.7rem 0; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); cursor: pointer; margin-bottom: -1px; transition: color 0.2s, border-color 0.2s; }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
+.tab-btn:hover { color: var(--ink); }
+.panel { display: none; padding-top: 2.5rem; animation: fadeIn 0.25s ease; }
+.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.section-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 1rem; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.btn { background: var(--ink); color: var(--paper); border: none; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; padding: 0.55rem 1.2rem; cursor: pointer; transition: background 0.18s; white-space: nowrap; }
+.btn:hover { background: var(--accent); }
+.btn-sm { padding: 0.32rem 0.7rem; font-size: 0.6rem; }
+.btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.62rem; padding: 0.32rem 0.7rem; cursor: pointer; transition: all 0.18s; }
+.btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+.btn-icon { background: none; border: none; color: #cccccc; cursor: pointer; transition: color 0.18s; font-size: 0.9rem; padding: 0.1rem 0.25rem; line-height: 1; }
+.btn-icon:hover { color: var(--accent); }
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field label { font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; color: var(--ink); padding: 0.38rem 0; outline: none; transition: border-color 0.18s; width: 100%; }
+.field input:focus, .field select:focus { border-bottom-color: var(--accent); }
+/* AUTOCOMPLETE */
+.ac-wrap { position: relative; }
+.ac-input { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; color: var(--ink); padding: 0.38rem 0; outline: none; transition: border-color 0.18s; width: 100%; }
+.ac-input:focus { border-bottom-color: var(--accent); }
+.ac-dropdown { position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--paper); border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,0.09); z-index: 50; display: none; max-height: 180px; overflow-y: auto; }
+.ac-dropdown.open { display: block; }
+.ac-item { padding: 0.55rem 0.9rem; font-size: 0.82rem; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; transition: background 0.12s; }
+.ac-item:hover, .ac-item.hi { background: var(--hover); }
+.ac-empty { padding: 0.55rem 0.9rem; font-size: 0.7rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* HOME */
+.add-form { background: var(--cream); border: 1px solid var(--border); padding: 1.75rem 2rem; margin-bottom: 2.5rem; }
+.add-form-title { font-family: 'DM Serif Display', serif; font-size: 1.15rem; margin-bottom: 1.25rem; }
+.add-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; }
+.proj-table-head { display: grid; grid-template-columns: 2fr 100px 100px 120px 90px 75px 52px; background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 1.25rem; gap: 1rem; align-items: center; }
+.proj-card { background: var(--paper); border-left: 3px solid transparent; border-bottom: 1px solid var(--border); transition: background 0.18s, border-left-color 0.18s; }
+.proj-card:hover { background: var(--hover); border-left-color: var(--accent); }
+.proj-card-main { display: grid; grid-template-columns: 2fr 100px 100px 120px 90px 75px 52px; align-items: center; padding: 1rem 1.25rem; gap: 1rem; cursor: pointer; }
+/* SEARCH FORM */
+.search-form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr; gap: 1rem; align-items: end; background: var(--cream); border: 1px solid var(--border); border-bottom: none; padding: 0.85rem 1.25rem; }
+.search-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.search-field label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.search-field input { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.82rem; color: var(--ink); padding: 0.25rem 0; outline: none; transition: border-color 0.18s; width: 100%; }
+.search-field input:focus { border-bottom-color: var(--accent); }
+.filter-pills-row { display: flex; gap: 0.35rem; flex-wrap: wrap; padding-bottom: 0.15rem; }
+.filter-pill { background: none; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.22rem 0.55rem; cursor: pointer; color: var(--muted); transition: all 0.15s; white-space: nowrap; }
+.filter-pill.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.proj-card-name { font-size: 0.9rem; }
+.proj-card-date { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+.proj-card-hours { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: var(--accent); }
+.proj-card-actions { display: flex; gap: 0.1rem; justify-content: flex-end; }
+.proj-meta-tag { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+.badge { display: inline-block; font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.06em; padding: 0.18rem 0.5rem; text-transform: uppercase; }
+.badge-ongoing { background: #fad5ee; color: #c04090; }
+.badge-done { background: #e0e0e8; color: #555566; }
+.badge-paused { background: #ececec; color: #888888; }
+/* STATUS INLINE SELECT */
+.status-inline { border: none; outline: none; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.18rem 0.5rem; border-radius: 2px; background: #fad5ee; color: #c04090; transition: opacity 0.15s; appearance: none; -webkit-appearance: none; }
+.status-inline:hover { opacity: 0.8; }
+.proj-expand { display: none; background: #fefefe; border-top: 1px solid var(--border); padding: 1.5rem 1.75rem 1.75rem; }
+.proj-expand.open { display: block; }
+.expand-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem; }
+.expand-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.3rem; }
+/* DETAIL FIELDS */
+.detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem 1.5rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+.detail-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.detail-field label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.detail-input { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.82rem; color: var(--ink); padding: 0.28rem 0; outline: none; transition: border-color 0.18s; width: 100%; }
+.detail-input:focus { border-bottom-color: var(--accent); }
+.detail-input::placeholder { color: #ccc; }
+.detail-textarea { border: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.82rem; color: var(--ink); padding: 0.5rem 0.75rem; outline: none; transition: border-color 0.18s; width: 100%; resize: vertical; min-height: 64px; line-height: 1.6; margin-bottom: 1.5rem; }
+.detail-textarea:focus { border-color: var(--accent); }
+.detail-textarea::placeholder { color: #ccc; }
+.expand-total { font-family: 'DM Serif Display', serif; font-size: 2rem; color: var(--accent); line-height: 1; }
+.expand-total-sub { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); margin-top: 0.2rem; }
+.segments-list { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 1.25rem; }
+.segment-row { display: flex; align-items: center; gap: 0.75rem; background: var(--cream); padding: 0.55rem 0.9rem; border: 1px solid var(--border); }
+.segment-label { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--ink); flex: 1; }
+.segment-hrs { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--accent); min-width: 38px; text-align: right; }
+.add-seg-row { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; }
+.seg-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.seg-field label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.seg-field input[type="date"], .seg-field input[type="time"] { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--ink); padding: 0.3rem 0; outline: none; transition: border-color 0.18s; }
+.seg-field input[type="date"] { width: 130px; }
+.seg-field input[type="time"] { width: 90px; }
+.seg-field input:focus { border-bottom-color: var(--accent); }
+.seg-hint { font-family: 'DM Mono', monospace; font-size: 0.57rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.6; }
+.empty-state { text-align: center; padding: 4rem 2rem; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.08em; border: 1px dashed var(--border); }
+
+/* SEGMENT TYPE */
+.seg-type-toggle { display: flex; border: 1px solid var(--border); overflow: hidden; align-self: flex-end; }
+.seg-type-btn { background: none; border: none; border-right: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.35rem 0.7rem; cursor: pointer; color: var(--muted); transition: all 0.15s; white-space: nowrap; }
+.seg-type-btn:last-child { border-right: none; }
+.seg-type-btn.st-active { background: var(--ink); color: var(--paper); }
+.seg-type-btn.st-rev { background: var(--accent); color: #fff; }
+.stag { font-family: 'DM Mono', monospace; font-size: 0.56rem; padding: 0.12rem 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 2px; }
+.stag-make { background: var(--accent-light); color: var(--accent); }
+.stag-rev  { background: #e8e8e8; color: #555; }
+
+
+/* SEARCH CLEAR BTN */
+.search-clear-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.58rem; padding: 0.22rem 0.6rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.search-clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* SORT */
+.sort-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.sort-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.sort-btn { background: none; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.22rem 0.65rem; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+.sort-btn.on { background: var(--ink); color: var(--accent); border-color: var(--ink); }
+/* BACK TO TOP */
+.back-to-top { position: fixed; bottom: 2rem; right: 2rem; z-index: 100; background: var(--ink); color: var(--accent); border: none; font-family: 'DM Mono', monospace; font-size: 0.75rem; width: 44px; height: 44px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+.back-to-top.visible { opacity: 1; pointer-events: auto; }
+.back-to-top:hover { background: var(--accent); color: #fff; }
+
+/* VIEW TOGGLE */
+.view-toggle { display: flex; gap: 0; border: 1px solid var(--border); overflow: hidden; }
+.view-btn { background: none; border: none; border-right: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.62rem; padding: 0.35rem 0.75rem; cursor: pointer; color: var(--muted); transition: all 0.15s; }
+.view-btn:last-child { border-right: none; }
+.view-btn.on { background: var(--ink); color: var(--accent); }
+/* KANBAN */
+.kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: start; }
+.kanban-col { background: var(--cream); border: 1px solid var(--border); }
+.kanban-col-head { padding: 0.75rem 1rem; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.kanban-col-count { background: var(--border); border-radius: 99px; padding: 0.1rem 0.5rem; font-size: 0.58rem; }
+.kanban-card { background: var(--paper); border-left: 3px solid var(--accent); margin: 0.75rem; padding: 0.85rem 1rem; cursor: pointer; transition: background 0.15s; }
+.kanban-card:hover { background: var(--hover); }
+.kanban-card-name { font-size: 0.88rem; margin-bottom: 0.4rem; }
+.kanban-card-meta { font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); line-height: 1.8; }
+.kanban-card-hours { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); margin-top: 0.35rem; display: flex; align-items: baseline; gap: 0.5rem; }
+.kanban-card-rev { font-family: 'DM Mono', monospace; font-size: 0.58rem; color: #bbb; }
+/* PLACEMENT ROWS */
+.pl-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.85rem; background: var(--cream); border: 1px solid var(--border); margin-bottom: 0.4rem; }
+.pl-row-name { font-size: 0.85rem; flex: 1; }
+.pl-row-qty-ctrl { display: flex; align-items: center; gap: 0.4rem; }
+.pl-qty-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 0.75rem; width: 22px; height: 22px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.pl-qty-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pl-row-qty { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); min-width: 24px; text-align: center; }
+.pl-tag-del { background: none; border: none; color: #ccc; cursor: pointer; font-size: 0.85rem; line-height: 1; padding: 0; transition: color 0.15s; }
+.pl-tag-del:hover { color: var(--accent); }
+.pl-add-row { display: flex; gap: 0.6rem; align-items: flex-end; }
+.pl-qty-input { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--ink); padding: 0.28rem 0; outline: none; text-align: center; transition: border-color 0.18s; }
+.pl-qty-input:focus { border-bottom-color: var(--accent); }
+.pl-ac-input { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; color: var(--ink); padding: 0.28rem 0; outline: none; width: 100%; transition: border-color 0.18s; }
+.pl-ac-input:focus { border-bottom-color: var(--accent); }
+.monthly-extras { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 3rem; }
+.monthly-extras .full-width { grid-column: 1 / -1; }
+.extra-card { border: 1px solid var(--border); padding: 1.5rem; }
+.extra-card-title { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.25rem; }
+.rank-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.rank-row:last-child { border-bottom: none; }
+.rank-name { font-size: 0.82rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-bar-wrap { width: 80px; height: 6px; background: var(--cream); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.rank-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.rank-val { font-family: 'DM Mono', monospace; font-size: 0.68rem; color: var(--accent); white-space: nowrap; }
+.rank-val.warn { color: #d04090; font-weight: 500; }
+.avg-num { font-family: 'DM Serif Display', serif; font-size: 2.5rem; color: var(--accent); line-height: 1; }
+.avg-sub { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); margin-top: 0.4rem; line-height: 1.7; }
+
+/* MONTHLY */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5px; background: var(--border); border: 1px solid var(--border); margin-bottom: 3rem; }
+.stat-card { background: var(--paper); padding: 1.75rem; transition: background 0.18s; }
+.stat-card:hover { background: var(--hover); }
+.stat-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+.stat-value { font-family: 'DM Serif Display', serif; font-size: 2.8rem; line-height: 1; }
+.stat-unit { font-family: 'DM Mono', monospace; font-size: 0.62rem; color: var(--muted); }
+.chart-toggle { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+.toggle-btn { background: none; border: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.28rem 0.7rem; cursor: pointer; color: var(--muted); transition: all 0.18s; }
+.toggle-btn.active { background: #333333; color: var(--accent); border-color: #333333; }
+.bar-chart { display: flex; flex-direction: column; gap: 0.7rem; }
+.bar-row { display: flex; align-items: center; gap: 1rem; }
+.bar-month { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); width: 44px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 26px; background: var(--cream); border: 1px solid var(--border); position: relative; overflow: hidden; }
+.bar-fill { position: absolute; left: 0; top: 0; bottom: 0; transition: width 0.55s cubic-bezier(.22,1,.36,1); }
+.bar-tasks { background: var(--accent); } .bar-hours { background: var(--accent); } .bar-output { background: var(--accent); }
+.bar-val { font-family: 'DM Serif Display', serif; font-size: 1rem; color: var(--ink); width: 40px; text-align: right; flex-shrink: 0; }
+
+/* REVIEW */
+.panel-top-bar { display: flex; justify-content: flex-end; margin-bottom: 1.75rem; }
+.review-hd { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.review-title { font-family: 'DM Serif Display', serif; font-size: 1.5rem; }
+.review-meta { font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); }
+
+.review-card-head { display: grid; grid-template-columns: 2fr 100px 80px 100px 120px 90px 75px; background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 1.25rem; gap: 1rem; }
+.review-card { background: var(--paper); border-left: 3px solid transparent; border-bottom: 1px solid var(--border); transition: background 0.18s, border-left-color 0.18s; }
+.review-card:hover { background: var(--hover); border-left-color: var(--accent); }
+.review-card-main { display: grid; grid-template-columns: 2fr 100px 80px 100px 120px 90px 75px; align-items: center; padding: 1rem 1.25rem; gap: 1rem; cursor: pointer; }
+.review-expand { display: none; background: #fefefe; border-top: 1px solid var(--border); padding: 1.5rem 1.75rem; }
+.review-expand.open { display: block; }
+.review-detail-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem 1.5rem; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+.review-detail-item { display: flex; flex-direction: column; gap: 0.3rem; }
+.review-detail-label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.review-detail-val { font-size: 0.85rem; color: var(--ink); line-height: 2; }
+.review-detail-val.hrs { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--accent); }
+.review-note-box { background: var(--cream); border: 1px solid var(--border); padding: 0.75rem 1rem; font-size: 0.82rem; color: var(--muted); line-height: 1.7; white-space: pre-wrap; margin-bottom: 1.25rem; }
+.review-segs { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+.review-total-bar { background: var(--cream); border-top: 1px solid var(--border); padding: 0.65rem 1.25rem; display: flex; justify-content: space-between; align-items: center; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+/* REVIEW FILTER */
+.review-filter-form { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1.3fr auto; gap: 1rem; align-items: end; background: var(--cream); border: 1px solid var(--border); padding: 0.85rem 1.25rem; margin-bottom: 0; }
+.review-filter-field { display: flex; flex-direction: column; gap: 0.3rem; }
+.review-filter-field label { font-family: 'DM Mono', monospace; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.review-filter-field input { border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.82rem; color: var(--ink); padding: 0.25rem 0; outline: none; transition: border-color 0.18s; width: 100%; }
+.review-filter-field input:focus { border-bottom-color: var(--accent); }
+
+/* SETTINGS */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+.mgr-block { border: 1px solid var(--border); }
+.mgr-head { background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase; padding: 0.8rem 1.25rem; }
+.mgr-body { padding: 1.5rem; }
+
+.chip-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.chip { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.8rem; border: 1px solid var(--border); background: var(--paper); transition: background 0.15s; }
+.chip:hover { background: var(--hover); }
+.chip-name { font-size: 0.84rem; }
+.chip-actions { display: flex; gap: 0.2rem; }
+.chip-edit-inp { border: none; border-bottom: 1px solid var(--accent); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.84rem; color: var(--ink); outline: none; width: 100%; }
+
+/* MGR AUTOCOMPLETE */
+.mgr-ac-wrap { position: relative; }
+.mgr-ac-input { width: 100%; border: none; border-bottom: 1px solid var(--border); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; color: var(--ink); padding: 0.4rem 0; outline: none; transition: border-color 0.18s; }
+.mgr-ac-input:focus { border-bottom-color: var(--accent); }
+.mgr-dropdown { position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--paper); border: 1px solid var(--border); box-shadow: 0 6px 18px rgba(0,0,0,0.09); z-index: 50; display: none; max-height: 260px; overflow-y: auto; }
+.mgr-dropdown.open { display: block; }
+.mgr-item { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.9rem; gap: 0.5rem; transition: background 0.12s; }
+.mgr-item:hover { background: var(--hover); }
+.mgr-item-name { font-size: 0.85rem; flex: 1; }
+.mgr-item-editing { flex: 1; }
+.mgr-item-edit-inp { border: none; border-bottom: 1px solid var(--accent); background: none; font-family: 'Noto Sans TC', sans-serif; font-size: 0.85rem; color: var(--ink); outline: none; width: 100%; }
+.mgr-item-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
+.mgr-add-hint { padding: 0.55rem 0.9rem; font-size: 0.72rem; color: var(--accent); font-family: 'DM Mono', monospace; cursor: pointer; border-top: 1px solid var(--border); }
+.mgr-add-hint:hover { background: var(--hover); }
+.mgr-no-result { padding: 0.55rem 0.9rem; font-size: 0.7rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(34,34,34,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; }
+.modal-overlay.hidden { display: none; }
+.modal-box { background: var(--paper); border: 1px solid var(--border); padding: 2.25rem; width: min(480px, 94vw); }
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin-bottom: 1.75rem; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.4rem; }
+.modal-grid .full { grid-column: 1 / -1; }
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+@media(max-width:700px){
+  .add-form-grid { grid-template-columns: 1fr 1fr; }
+  .proj-table-head { display: none; }
+  .proj-card-main { grid-template-columns: 1fr 1fr; }
+  .stats-row { grid-template-columns: 1fr; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .modal-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div>
+    <div class="brand-title">Productivity Log</div>
+    <div class="brand-sub">by jouhsuan</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('home',this)">專案總覽</button>
+  <button class="tab-btn" onclick="switchTab('review',this)">月份回顧</button>
+  <button class="tab-btn" onclick="switchTab('monthly',this)">每月產能</button>
+  <button class="tab-btn" onclick="switchTab('settings',this)">設定</button>
+</div>
+
+<!-- HOME -->
+<div id="panel-home" class="panel active">
+  <div class="add-form">
+    <div class="add-form-title">新增案件</div>
+    <div class="add-form-grid" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr auto">
+      <div class="field"><label>案件名稱</label><div class="ac-wrap"><input class="ac-input" id="new-name" placeholder="輸入案件名稱" autocomplete="off" oninput="acFilter('name')" onfocus="acOpen('name')" onkeydown="acKey(event,'name')"><div class="ac-dropdown" id="ac-name"></div></div></div>
+      <div class="field"><label>廣告主</label><div class="ac-wrap"><input class="ac-input" id="new-adv" placeholder="搜尋或選擇" autocomplete="off" oninput="acFilter('adv')" onfocus="acOpen('adv')" onkeydown="acKey(event,'adv')"><div class="ac-dropdown" id="ac-adv"></div></div></div>
+      <div class="field"><label>業務</label><div class="ac-wrap"><input class="ac-input" id="new-rep" placeholder="搜尋或選擇" autocomplete="off" oninput="acFilter('rep')" onfocus="acOpen('rep')" onkeydown="acKey(event,'rep')"><div class="ac-dropdown" id="ac-rep"></div></div></div>
+      <div class="field"><label>類別</label><div class="ac-wrap"><input class="ac-input" id="new-cat" placeholder="搜尋或選擇" autocomplete="off" oninput="acFilter('cat')" onfocus="acOpen('cat')" onkeydown="acKey(event,'cat')"><div class="ac-dropdown" id="ac-cat"></div></div></div>
+      <div class="field"><label>狀態</label>
+        <select id="new-status">
+          <option value="ongoing">進行中</option>
+          <option value="done">完成</option>
+          <option value="paused">暫停</option>
+        </select>
+      </div>
+      <button class="btn" onclick="addProject()">＋ 新增</button>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;gap:0.75rem;align-items:center">
+    <button class="search-clear-btn" onclick="clearSearch()">✕ 清除搜尋</button>
+    <div class="view-toggle">
+      <button class="view-btn on" onclick="setView('list',this)" title="清單">☰ 清單</button>
+      <button class="view-btn" onclick="setView('kanban',this)" title="看板">⊞ 看板</button>
+    </div>
+  </div>
+  <div class="search-form" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.2fr">
+    <div class="search-field"><label>案件名稱</label><input type="text" id="s-name" placeholder="搜尋名稱" oninput="renderHome()"></div>
+    <div class="search-field"><label>廣告主</label><input type="text" id="s-adv" placeholder="搜尋廣告主" oninput="renderHome()"></div>
+    <div class="search-field"><label>業務</label><input type="text" id="s-rep" placeholder="搜尋業務" oninput="renderHome()"></div>
+    <div class="search-field"><label>類別</label><input type="text" id="s-cat" placeholder="搜尋類別" oninput="renderHome()"></div>
+    <div class="search-field"><label>日期</label><input type="text" id="s-date" placeholder="如 2025/3" oninput="renderHome()"></div>
+    <div class="search-field"><label>狀態</label>
+      <div class="filter-pills-row">
+        <button class="filter-pill on" onclick="setFilter('all',this)">全部</button>
+        <button class="filter-pill" onclick="setFilter('ongoing',this)">進行中</button>
+        <button class="filter-pill" onclick="setFilter('done',this)">完成</button>
+        <button class="filter-pill" onclick="setFilter('paused',this)">暫停</button>
+      </div>
+    </div>
+  </div>
+  <div class="proj-table-head" style="grid-template-columns:2fr 90px 80px 90px 120px 85px 52px">
+    <span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span><span>狀態</span><span></span>
+  </div>
+  <div id="projList"></div>
+  <div id="kanbanBoard" style="display:none"></div>
+  <div id="projEmpty" class="empty-state">尚無案件 — 從上方新增第一個案件</div>
+</div>
+
+<!-- MONTHLY -->
+<div id="panel-monthly" class="panel">
+  <div class="panel-top-bar">
+    <div class="month-selector">
+      <span class="month-label">月份</span>
+      <select id="monthSelect" onchange="onMonthChange()"></select>
+      <span class="month-label">年</span>
+      <select id="yearSelect" onchange="onMonthChange()"></select>
+    </div>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-bottom:1.75rem;letter-spacing:0.08em">自動從專案紀錄統計 · 數據即時更新</div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-label">當月案件數</div><div class="stat-value" id="val-tasks">0</div><div class="stat-unit">projects created</div></div>
+    <div class="stat-card"><div class="stat-label">當月製作工時</div><div class="stat-value" id="val-hours">0</div><div class="stat-unit">hours logged</div></div>
+    <div class="stat-card"><div class="stat-label">完成案件數</div><div class="stat-value" id="val-output">0</div><div class="stat-unit">projects done</div></div>
+  </div>
+  <div class="section-label">過去 12 個月趨勢</div>
+  <div class="chart-toggle">
+    <button class="toggle-btn active" onclick="switchChart('tasks',this)">案件數</button>
+    <button class="toggle-btn" onclick="switchChart('hours',this)">工時</button>
+    <button class="toggle-btn" onclick="switchChart('output',this)">完成數</button>
+  </div>
+  <div class="bar-chart" id="barChart"></div>
+
+  <!-- 第一行：業務案件執行數量 + 執行版位 -->
+  <div class="monthly-extras" style="margin-top:2rem">
+    <div class="extra-card">
+      <div class="extra-card-title">業務案件執行數量（本月）</div>
+      <div id="repRank"></div>
+    </div>
+    <div class="extra-card" id="avgSummaryCard">
+      <div class="extra-card-title">本月平均工時 · 執行版位</div>
+      <div id="avgSummary"></div>
+    </div>
+  </div>
+
+  <!-- 第三行：廣告主工時排行 + 修改時數佔比 -->
+  <div class="monthly-extras" style="margin-top:1.5rem">
+    <div class="extra-card">
+      <div class="extra-card-title">廣告主工時排行（本月）</div>
+      <div id="advRank"></div>
+    </div>
+    <div class="extra-card">
+      <div class="extra-card-title">修改時數佔比（改稿比例偏高）</div>
+      <div id="revRank"></div>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW -->
+<div id="panel-review" class="panel">
+  <div class="review-hd">
+    <div><div class="review-title" id="reviewTitle">月份回顧</div><div class="review-meta" id="reviewMeta"></div></div>
+    <div class="month-selector">
+      <span class="month-label">月份</span>
+      <select id="monthSelectR" onchange="onMonthChange()"></select>
+      <span class="month-label">年</span>
+      <select id="yearSelectR" onchange="onMonthChange()"></select>
+    </div>
+  </div>
+  <div class="sort-row">
+    <span class="sort-label">排序</span>
+    <button class="sort-btn on" onclick="setReviewSort('date',this)">建立日期</button>
+    <button class="sort-btn" onclick="setReviewSort('hours',this)">工時</button>
+    <button class="sort-btn" onclick="setReviewSort('launch',this)">上線日期</button>
+    <button class="sort-btn" onclick="setReviewSort('name',this)">名稱</button>
+    <button class="sort-btn" onclick="setReviewSort('rep',this)">業務</button>
+  </div>
+  <div class="review-filter-form">
+    <div class="review-filter-field">
+      <label>案件名稱</label>
+      <input type="text" id="rf-name" placeholder="搜尋…" oninput="renderReview()">
+    </div>
+    <div class="review-filter-field">
+      <label>廣告主</label>
+      <input type="text" id="rf-adv" placeholder="搜尋…" oninput="renderReview()">
+    </div>
+    <div class="review-filter-field">
+      <label>業務</label>
+      <input type="text" id="rf-rep" placeholder="搜尋…" oninput="renderReview()">
+    </div>
+    <div class="review-filter-field">
+      <label>類別</label>
+      <input type="text" id="rf-cat" placeholder="搜尋…" oninput="renderReview()">
+    </div>
+    <div class="review-filter-field">
+      <label>狀態</label>
+      <div class="filter-pills-row">
+        <button class="filter-pill on" onclick="setReviewFilter('all',this)">全部</button>
+        <button class="filter-pill" onclick="setReviewFilter('ongoing',this)">進行中</button>
+        <button class="filter-pill" onclick="setReviewFilter('done',this)">完成</button>
+        <button class="filter-pill" onclick="setReviewFilter('paused',this)">暫停</button>
+      </div>
+    </div>
+    <button class="search-clear-btn" onclick="clearReviewFilter()">✕ 清除</button>
+  </div>
+  <div id="reviewContent"></div>
+</div>
+
+<!-- SETTINGS -->
+<div id="panel-settings" class="panel">
+  <div class="settings-grid">
+    <div class="mgr-block">
+      <div class="mgr-head">類別管理</div>
+      <div class="mgr-body">
+        <div class="mgr-ac-wrap">
+          <input class="mgr-ac-input" id="catNewName" placeholder="輸入名稱以新增或搜尋…" autocomplete="off"
+            oninput="mgrFilter('cat')" onfocus="mgrFilter('cat')"
+            onkeydown="mgrKey(event,'cat')">
+          <div class="mgr-dropdown" id="mgr-dd-cat"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:0.4rem">輸入新名稱按 Enter 新增 · 點選現有項目可編輯或刪除</div>
+      </div>
+    </div>
+    <div class="mgr-block">
+      <div class="mgr-head">廣告主管理</div>
+      <div class="mgr-body">
+        <div class="mgr-ac-wrap">
+          <input class="mgr-ac-input" id="advNewName" placeholder="輸入名稱以新增或搜尋…" autocomplete="off"
+            oninput="mgrFilter('adv')" onfocus="mgrFilter('adv')"
+            onkeydown="mgrKey(event,'adv')">
+          <div class="mgr-dropdown" id="mgr-dd-adv"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:0.4rem">輸入新名稱按 Enter 新增 · 點選現有項目可編輯或刪除</div>
+      </div>
+    </div>
+    <div class="mgr-block">
+      <div class="mgr-head">版位管理</div>
+      <div class="mgr-body">
+        <div class="mgr-ac-wrap">
+          <input class="mgr-ac-input" id="plNewName" placeholder="輸入名稱以新增或搜尋…" autocomplete="off"
+            oninput="mgrFilter('pl')" onfocus="mgrFilter('pl')"
+            onkeydown="mgrKey(event,'pl')">
+          <div class="mgr-dropdown" id="mgr-dd-pl"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:0.4rem">輸入新名稱按 Enter 新增 · 點選現有項目可編輯或刪除</div>
+      </div>
+    </div>
+    <div class="mgr-block">
+      <div class="mgr-head">業務管理</div>
+      <div class="mgr-body">
+        <div class="mgr-ac-wrap">
+          <input class="mgr-ac-input" id="repNewName" placeholder="輸入名稱以新增或搜尋…" autocomplete="off"
+            oninput="mgrFilter('rep')" onfocus="mgrFilter('rep')"
+            onkeydown="mgrKey(event,'rep')">
+          <div class="mgr-dropdown" id="mgr-dd-rep"></div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:0.4rem">輸入新名稱按 Enter 新增 · 點選現有項目可編輯或刪除</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到頂部">↑</button>
+
+<!-- CONFIRM DIALOG -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-title" id="confirmTitle">確定刪除？</div>
+    <div id="confirmMsg" style="font-size:0.85rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.6"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeConfirm()">取消</button>
+      <button class="btn btn-sm" id="confirmOkBtn" style="background:var(--accent)">確定刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="metaModal">
+  <div class="modal-box">
+    <div class="modal-title">編輯案件資訊</div>
+    <div class="modal-grid">
+      <div class="field full"><label>案件名稱</label><input type="text" id="m-name"></div>
+      <div class="field">
+        <label>類別</label>
+        <div class="ac-wrap">
+          <input class="ac-input" id="m-cat" placeholder="搜尋或選擇" autocomplete="off"
+            oninput="acFilterModal('cat')" onfocus="acFilterModal('cat')" onkeydown="acKeyModal(event,'cat')">
+          <div class="ac-dropdown" id="m-dd-cat"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>廣告主</label>
+        <div class="ac-wrap">
+          <input class="ac-input" id="m-adv" placeholder="搜尋或選擇" autocomplete="off"
+            oninput="acFilterModal('adv')" onfocus="acFilterModal('adv')" onkeydown="acKeyModal(event,'adv')">
+          <div class="ac-dropdown" id="m-dd-adv"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>業務</label>
+        <div class="ac-wrap">
+          <input class="ac-input" id="m-rep" placeholder="搜尋或選擇" autocomplete="off"
+            oninput="acFilterModal('rep')" onfocus="acFilterModal('rep')" onkeydown="acKeyModal(event,'rep')">
+          <div class="ac-dropdown" id="m-dd-rep"></div>
+        </div>
+      </div>
+      <div class="field"><label>狀態</label>
+        <select id="m-status">
+          <option value="ongoing">進行中</option>
+          <option value="done">完成</option>
+          <option value="paused">暫停</option>
+        </select>
+      </div>
+      <div class="field"><label>建立日期</label><input type="date" id="m-date"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-sm" onclick="saveModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let D = JSON.parse(localStorage.getItem('wt-v4') || '{}');
+if (!D.projects)    D.projects    = [];
+if (!D.categories)  D.categories  = ['品牌設計','UI/UX','插畫','動態設計','印刷','其他'];
+if (!D.advertisers) D.advertisers = [];
+if (!D.placements)  D.placements  = ['IG','FB','YouTube','TikTok','LINE','官網'];
+if (!D.salesreps)   D.salesreps   = [];
+function save() { localStorage.setItem('wt-v4', JSON.stringify(D)); }
+
+const now = new Date();
+let curYear = now.getFullYear(), curMonth = now.getMonth()+1;
+const ML = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function initSelectors() {
+  [['monthSelect','yearSelect'],['monthSelectR','yearSelectR']].forEach(([msId,ysId])=>{
+    const ms=document.getElementById(msId), ys=document.getElementById(ysId);
+    if(!ms||!ys) return;
+    ML.forEach((n,i)=>{ const o=document.createElement('option'); o.value=i+1; o.textContent=n; if(i+1===curMonth)o.selected=true; ms.appendChild(o); });
+    for(let y=curYear+5;y>=2026;y--){ const o=document.createElement('option'); o.value=y; o.textContent=y; if(y===curYear)o.selected=true; ys.appendChild(o); }
+  });
+}
+function onMonthChange() {
+  // read from whichever selector changed
+  const ms=document.getElementById('monthSelect'), ys=document.getElementById('yearSelect');
+  const msR=document.getElementById('monthSelectR'), ysR=document.getElementById('yearSelectR');
+  // sync both pairs to whichever fired last
+  const src = document.activeElement;
+  if (src===ms||src===ys) {
+    curMonth=parseInt(ms.value); curYear=parseInt(ys.value);
+    if(msR) msR.value=curMonth; if(ysR) ysR.value=curYear;
+  } else {
+    curMonth=parseInt(msR.value); curYear=parseInt(ysR.value);
+    if(ms) ms.value=curMonth; if(ys) ys.value=curYear;
+  }
+  renderMonthly(); renderReview();
+}
+
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active'); btn.classList.add('active');
+  if(id==='review')   renderReview();
+  if(id==='settings') { renderCatList(); renderAdvList(); renderPlList(); }
+  if(id==='monthly')  renderMonthly();
+}
+
+function populateSelects() {
+  ['m-cat'].forEach(id=>{ const sel=document.getElementById(id); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="">—</option>'; D.categories.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);}); if(cur)sel.value=cur; });
+  ['m-adv'].forEach(id=>{ const sel=document.getElementById(id); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="">—</option>'; D.advertisers.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sel.appendChild(o);}); if(cur)sel.value=cur; });
+  ['m-rep'].forEach(id=>{ const sel=document.getElementById(id); if(!sel)return; const cur=sel.value; sel.innerHTML='<option value="">—</option>'; D.salesreps.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;sel.appendChild(o);}); if(cur)sel.value=cur; });
+}
+
+/* AUTOCOMPLETE */
+let acHiIdx = { cat: -1, adv: -1 };
+
+function acItems(type) {
+  if (type === 'cat') return D.categories;
+  if (type === 'adv') return D.advertisers;
+  if (type === 'rep') return D.salesreps;
+  if (type === 'name') return [...new Set(D.projects.map(p => p.name))];
+  return [];
+}
+function acOpen(type) {
+  acFilter(type);
+}
+function acFilter(type) {
+  const inp = document.getElementById('new-' + type);
+  const dd  = document.getElementById('ac-' + type);
+  const q   = inp.value.trim().toLowerCase();
+  const all = acItems(type);
+  const filtered = q ? all.filter(i => i.toLowerCase().includes(q)) : all;
+  acHiIdx[type] = -1;
+  if (!filtered.length) {
+    const hint = (type === 'cat' || type === 'adv')
+      ? `<div class="ac-empty">找不到符合項目 — 按 Enter 新增「${inp.value.trim()}」</div>`
+      : `<div class="ac-empty">找不到符合的項目</div>`;
+    dd.innerHTML = hint;
+  } else {
+    dd.innerHTML = filtered.map((item, i) =>
+      `<div class="ac-item" onmousedown="acSelect('${type}','${item.replace(/'/g,"\\'")}')">` + item + `</div>`
+    ).join('');
+  }
+  dd.classList.add('open');
+}
+function acSelect(type, value) {
+  document.getElementById('new-' + type).value = value;
+  document.getElementById('ac-' + type).classList.remove('open');
+  acHiIdx[type] = -1;
+}
+function acKey(e, type) {
+  const dd = document.getElementById('ac-' + type);
+  const items = dd.querySelectorAll('.ac-item');
+  if (!dd.classList.contains('open')) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acHiIdx[type] = Math.min(acHiIdx[type] + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('hi', i === acHiIdx[type]));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acHiIdx[type] = Math.max(acHiIdx[type] - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('hi', i === acHiIdx[type]));
+  } else if (e.key === 'Enter') {
+    if (acHiIdx[type] >= 0 && items[acHiIdx[type]]) {
+      e.preventDefault();
+      acSelect(type, items[acHiIdx[type]].textContent);
+    } else if (type === 'name') {
+      dd.classList.remove('open');
+      addProject();
+    } else if (type === 'cat' || type === 'adv' || type === 'rep') {
+      const val = document.getElementById('new-' + type).value.trim();
+      if (val) {
+        e.preventDefault();
+        const list = type === 'cat' ? D.categories : type === 'adv' ? D.advertisers : D.salesreps;
+        if (!list.includes(val)) {
+          list.push(val);
+          save();
+          if (type === 'cat') renderCatList(); else renderAdvList();
+        }
+        acSelect(type, val);
+      }
+    }
+  } else if (e.key === 'Escape') {
+    dd.classList.remove('open');
+  }
+}
+// close dropdowns on outside click
+document.addEventListener('click', e => {
+  ['name','cat','adv','rep'].forEach(type => {
+    const wrap = document.getElementById('new-' + type)?.closest('.ac-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('ac-' + type)?.classList.remove('open');
+    }
+  });
+});
+
+/* CATEGORY MANAGER */
+/* SETTINGS MANAGER — unified autocomplete */
+function mgrData(type){ return type==='cat'?D.categories:type==='adv'?D.advertisers:type==='rep'?D.salesreps:D.placements; }
+function mgrInputId(type){ return type==='cat'?'catNewName':type==='adv'?'advNewName':type==='rep'?'repNewName':'plNewName'; }
+
+function mgrFilter(type){
+  const inp=document.getElementById(mgrInputId(type));
+  const dd=document.getElementById('mgr-dd-'+type);
+  const q=(inp?.value||'').trim().toLowerCase();
+  const items=mgrData(type);
+  const filtered=q?items.filter(x=>x.toLowerCase().includes(q)):items;
+  dd.innerHTML='';
+  filtered.forEach((item)=>{
+    const i=items.indexOf(item);
+    const row=document.createElement('div'); row.className='mgr-item';
+    row.innerHTML=`<span class="mgr-item-name" id="mgrlabel-${type}-${i}">${item}</span>
+      <div class="mgr-item-actions">
+        <button class="btn-icon" onclick="mgrStartEdit('${type}',${i})" title="重新命名">✎</button>
+        <button class="btn-icon" onclick="mgrDelete('${type}',${i})" title="刪除">✕</button>
+      </div>`;
+    dd.appendChild(row);
+  });
+  // add hint
+  const val=inp?.value.trim();
+  if(val && !items.includes(val)){
+    const hint=document.createElement('div'); hint.className='mgr-add-hint';
+    hint.textContent=`＋ 新增「${val}」`;
+    hint.onmousedown=()=>mgrAdd(type);
+    dd.appendChild(hint);
+  } else if(!filtered.length && !val){
+    const empty=document.createElement('div'); empty.className='mgr-no-result';
+    empty.textContent='尚無項目'; dd.appendChild(empty);
+  }
+  dd.classList.add('open');
+}
+
+function mgrKey(e, type){
+  if(e.key==='Enter'){ e.preventDefault(); mgrAdd(type); }
+  else if(e.key==='Escape') document.getElementById('mgr-dd-'+type)?.classList.remove('open');
+}
+
+function mgrAdd(type){
+  const inp=document.getElementById(mgrInputId(type));
+  const val=(inp?.value||'').trim(); if(!val) return;
+  const list=mgrData(type);
+  if(!list.includes(val)){ list.push(val); save(); populateSelects(); }
+  inp.value=''; mgrFilter(type);
+}
+
+function mgrStartEdit(type, i){
+  const span=document.getElementById(`mgrlabel-${type}-${i}`);
+  if(!span) return;
+  const old=mgrData(type)[i];
+  span.outerHTML=`<div class="mgr-item-editing"><input class="mgr-item-edit-inp" id="mgredit-${type}-${i}" value="${old}"
+    onblur="mgrFinishEdit('${type}',${i})"
+    onkeydown="if(event.key==='Enter')mgrFinishEdit('${type}',${i});if(event.key==='Escape')mgrFilter('${type}')"></div>`;
+  document.getElementById(`mgredit-${type}-${i}`)?.focus();
+}
+
+function mgrFinishEdit(type, i){
+  const inp=document.getElementById(`mgredit-${type}-${i}`); if(!inp) return;
+  const val=inp.value.trim(); const list=mgrData(type); const old=list[i];
+  if(val && val!==old){
+    list[i]=val;
+    D.projects.forEach(p=>{ if(type==='cat'&&p.cat===old)p.cat=val; if(type==='adv'&&p.adv===old)p.adv=val; });
+    save(); populateSelects();
+  }
+  mgrFilter(type);
+}
+
+function mgrDelete(type, i){
+  const list=mgrData(type); const item=list[i];
+  const field=type==='cat'?'cat':type==='adv'?'adv':null;
+  const used=field&&D.projects.some(p=>p[field]===item);
+  if(used&&!confirm(`「${item}」已有案件使用，刪除後欄位將顯示為空。確定？`))return;
+  if(field) D.projects.forEach(p=>{if(p[field]===item)p[field]='';});
+  list.splice(i,1); save(); populateSelects(); mgrFilter(type);
+}
+
+// close on outside click
+document.addEventListener('click', e=>{
+  ['cat','adv','pl'].forEach(type=>{
+    const wrap=document.getElementById(mgrInputId(type))?.closest('.mgr-ac-wrap');
+    const dd=document.getElementById('mgr-dd-'+type);
+    if(wrap&&!wrap.contains(e.target)) dd?.classList.remove('open');
+  });
+});
+
+// keep old render functions as no-ops so init calls don't break
+function renderCatList(){} function renderAdvList(){} function renderPlList(){}
+function addCat(){ mgrAdd('cat'); } function addAdv(){ mgrAdd('adv'); } function addPlacement(){ mgrAdd('pl'); }
+
+/* ADVERTISER MANAGER */
+function renderAdvList() { }
+
+/* PLACEMENT MANAGER */
+function renderPlList() { }
+function addPlacement(){ mgrAdd('pl'); }
+
+/* PLACEMENT TAGS ON PROJECT */
+function renderPlRows(p) {
+  const tags=(p.placements||[]);
+  if(!tags.length) return `<div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);padding:.25rem 0">尚未新增版位</div>`;
+  return tags.map((t,i)=>`
+    <div class="pl-row" id="pl-row-${p.id}-${i}">
+      <span class="pl-row-name">${t.name}</span>
+      <div class="pl-row-qty-ctrl">
+        <button class="pl-qty-btn" onclick="adjustPlQty(${p.id},${i},-1)">−</button>
+        <span class="pl-row-qty">${t.qty}</span>
+        <button class="pl-qty-btn" onclick="adjustPlQty(${p.id},${i},1)">＋</button>
+      </div>
+      <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">${t.qty} 支</span>
+      <button class="pl-tag-del" onclick="removePlTag(${p.id},${i})">✕</button>
+    </div>`).join('');
+}
+
+function adjustPlQty(projId, idx, delta) {
+  const p=D.projects.find(p=>p.id===projId); if(!p||!p.placements?.[idx]) return;
+  p.placements[idx].qty=Math.max(1, p.placements[idx].qty+delta);
+  save();
+  const el=document.getElementById(`pl-rows-${projId}`); if(el) el.innerHTML=renderPlRows(p);
+  renderMonthly();
+}
+
+function removePlTag(projId, idx) {
+  const p=D.projects.find(p=>p.id===projId); if(!p) return;
+  if(!p.placements) return;
+  p.placements.splice(idx,1); save();
+  const el=document.getElementById(`pl-rows-${projId}`); if(el) el.innerHTML=renderPlRows(p);
+  renderMonthly();
+}
+
+function addPlTag(projId) {
+  const p=D.projects.find(p=>p.id===projId); if(!p) return;
+  const nameEl=document.getElementById(`pl-name-${projId}`);
+  const qtyEl=document.getElementById(`pl-qty-${projId}`);
+  const name=(nameEl?.value||'').trim(); if(!name) return;
+  const qty=Math.max(1, parseInt(qtyEl?.value)||1);
+  if(!p.placements) p.placements=[];
+  const existing=p.placements.find(t=>t.name===name);
+  if(existing){ existing.qty+=qty; } else { p.placements.push({name,qty}); }
+  if(!D.placements.includes(name)){ D.placements.push(name); }
+  save(); nameEl.value=''; if(qtyEl) qtyEl.value='1';
+  const el=document.getElementById(`pl-rows-${projId}`); if(el) el.innerHTML=renderPlRows(p);
+  document.getElementById(`pl-dd-${projId}`)?.classList.remove('open');
+  renderMonthly();
+}
+function plFilter(projId) {
+  const inp=document.getElementById(`pl-name-${projId}`);
+  const dd=document.getElementById(`pl-dd-${projId}`);
+  const q=(inp?.value||'').trim().toLowerCase();
+  const filtered=q?D.placements.filter(pl=>pl.toLowerCase().includes(q)):D.placements;
+  if(!filtered.length){
+    dd.innerHTML=`<div class="ac-empty">找不到 — 按 Enter 新增「${inp.value.trim()}」</div>`;
+  } else {
+    dd.innerHTML=filtered.map(pl=>`<div class="ac-item" onmousedown="plSelect(${projId},'${pl.replace(/'/g,"\\'")}')"> ${pl}</div>`).join('');
+  }
+  dd.classList.add('open');
+}
+function plSelect(projId, val) {
+  const inp=document.getElementById(`pl-name-${projId}`); if(inp) inp.value=val;
+  document.getElementById(`pl-dd-${projId}`)?.classList.remove('open');
+}
+function plKey(e, projId) {
+  const dd=document.getElementById(`pl-dd-${projId}`);
+  if(e.key==='Enter'){ e.preventDefault(); addPlTag(projId); }
+  else if(e.key==='Escape') dd?.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  document.querySelectorAll('[id^="pl-dd-"]').forEach(dd=>{
+    const wrap=dd.previousElementSibling;
+    if(wrap && !wrap.contains(e.target) && !dd.contains(e.target)) dd.classList.remove('open');
+  });
+});
+
+/* TIME */
+function segHours(seg){ if(!seg.date||!seg.start||!seg.end)return 0; const[sh,sm]=seg.start.split(':').map(Number),[eh,em]=seg.end.split(':').map(Number); const d=(eh*60+em)-(sh*60+sm); return d>0?d/60:0; }
+function totalHours(p){ return(p.segments||[]).reduce((s,sg)=>s+segHours(sg),0); }
+function fmtSeg(seg){ if(!seg.date)return '—'; const d=new Date(seg.date+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()} ${seg.start}–${seg.end}`; }
+function fmtH(h){ return h>0?h.toFixed(1)+'h':'—'; }
+function fmtDate(ts){ const d=new Date(ts); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`; }
+
+/* HOME */
+let openId=null;
+function addProject(){
+  const name=document.getElementById('new-name').value.trim(); if(!name){alert('請輸入案件名稱');return;}
+  const cat=document.getElementById('new-cat').value.trim();
+  const adv=document.getElementById('new-adv').value.trim();
+  const rep=document.getElementById('new-rep').value.trim();
+  const p={id:Date.now(),name,cat,adv,rep,status:document.getElementById('new-status').value,createdAt:Date.now(),segments:[]};
+  D.projects.unshift(p); save();
+  document.getElementById('new-name').value='';
+  document.getElementById('new-cat').value='';
+  document.getElementById('new-adv').value='';
+  document.getElementById('new-rep').value='';
+  document.getElementById('ac-name').classList.remove('open');
+  openId=p.id; renderHome(); renderMonthly();
+}
+/* CONFIRM DIALOG */
+let confirmCallback = null;
+function showConfirm(title, msg, onOk) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = onOk;
+  document.getElementById('confirmOkBtn').onclick = () => { closeConfirm(); onOk(); };
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  confirmCallback = null;
+}
+document.getElementById('confirmModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeConfirm(); });
+
+function deleteProject(id){
+  const p=D.projects.find(p=>p.id===id); if(!p) return;
+  showConfirm('確定刪除案件？', `「${p.name}」刪除後無法復原，包含所有時段紀錄。`, ()=>{
+    D.projects=D.projects.filter(p=>p.id!==id);
+    if(openId===id) openId=null;
+    save(); renderHome(); renderReview(); renderMonthly();
+  });
+}
+/* COPY PROJECT */
+function copyProject(id) {
+  const p=D.projects.find(p=>p.id===id); if(!p) return;
+  const copy={...JSON.parse(JSON.stringify(p)), id:Date.now(), name:p.name+' (複製)', createdAt:Date.now(), segments:[]};
+  D.projects.unshift(copy); save(); openId=copy.id; renderHome(); renderMonthly();
+}
+
+/* VIEW MODE */
+let viewMode='list';
+function setView(mode, btn) {
+  viewMode=mode;
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderHome();
+}
+
+/* TODAY SHORTCUT */
+function fillToday(id) {
+  const t=new Date(); const pad=n=>String(n).padStart(2,'0');
+  document.getElementById(`sd-${id}`).value=`${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+}
+
+function saveDetail(id, field, value) {
+  const p=D.projects.find(p=>p.id===id); if(!p) return;
+  p[field]=value; save();
+}
+
+function saveField(id, field, value) {
+  const p=D.projects.find(p=>p.id===id); if(!p) return;
+  p[field]=value; save(); renderReview(); renderMonthly();
+  // update status select color instantly without full re-render
+  if(field==='status'){
+    const sel=event.target;
+    const colors={ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888'};
+    sel.style.cssText=colors[value]||'';
+  }
+}
+function saveFieldDate(id, value) {
+  const p=D.projects.find(p=>p.id===id); if(!p) return;
+  const d=new Date(value+'T00:00:00'); if(!isNaN(d)) p.createdAt=d.getTime();
+  save(); renderReview(); renderMonthly();
+}
+
+function toggleCard(id){ openId=openId===id?null:id; renderHome(); }
+function addSeg(id){
+  const p=D.projects.find(p=>p.id===id); if(!p)return;
+  const date=document.getElementById(`sd-${id}`).value, start=document.getElementById(`ss-${id}`).value, end=document.getElementById(`se-${id}`).value;
+  if(!date||!start||!end){alert('請填寫日期、開始與結束時間');return;}
+  if(segHours({date,start,end})<=0){alert('結束時間須晚於開始時間');return;}
+  const type=document.querySelector(`#seg-type-${id} .st-active`)?.dataset.type||'make';
+  if(!p.segments)p.segments=[]; p.segments.push({date,start,end,type}); save(); openId=id; renderHome(); renderReview(); renderMonthly();
+}
+function deleteSeg(projId,segIdx){ const p=D.projects.find(p=>p.id===projId); if(!p)return; p.segments.splice(segIdx,1); save(); openId=projId; renderHome(); renderReview(); renderMonthly(); }
+
+function setSegType(id, type, btn) {
+  document.querySelectorAll(`#seg-type-${id} .seg-type-btn`).forEach(b=>b.classList.remove('st-active','st-rev'));
+  btn.classList.add('st-active'); if(type==='revision') btn.classList.add('st-rev');
+}
+
+let curFilter = 'all';
+function setFilter(status, btn) {
+  curFilter = status;
+  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderHome();
+}
+
+function renderKanban(filtered) {
+  const container=document.getElementById('projList');
+  const kanban=document.getElementById('kanbanBoard');
+  const empty=document.getElementById('projEmpty');
+  const tableHead=document.querySelector('.proj-table-head');
+  container.style.display='none'; container.innerHTML='';
+  if(tableHead) tableHead.style.display='none';
+  kanban.style.display='';
+  empty.style.display='none';
+  if(!D.projects.length){empty.style.display='';kanban.style.display='none';return;}
+
+  const cols={ongoing:{label:'進行中',items:[]},done:{label:'完成',items:[]},paused:{label:'暫停',items:[]}};
+  filtered.forEach(p=>{ if(cols[p.status]) cols[p.status].items.push(p); });
+
+  kanban.className='kanban-board';
+  kanban.innerHTML=Object.entries(cols).map(([status,col])=>{
+    const cards=col.items.map(p=>{
+      const h=totalHours(p);
+      const revH=(p.segments||[]).filter(s=>s.type==='revision').reduce((a,s)=>a+segHours(s),0);
+      const revPct=h>0?Math.round(revH/h*100):0;
+      return `<div class="kanban-card" onclick="switchToList(${p.id})">
+        <div class="kanban-card-name">${p.name}</div>
+        <div class="kanban-card-meta">${p.adv||'—'} · ${p.cat||'—'}<br>${fmtDate(p.createdAt)}</div>
+        <div class="kanban-card-hours">${fmtH(h)}${revPct>0?`<span class="kanban-card-rev">修改 ${revPct}%</span>`:''}</div>
+      </div>`;
+    }).join('') || `<div style="padding:.75rem 1rem;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted)">無案件</div>`;
+    return `<div class="kanban-col">
+      <div class="kanban-col-head"><span>${col.label}</span><span class="kanban-col-count">${col.items.length}</span></div>
+      ${cards}
+    </div>`;
+  }).join('');
+}
+
+function switchToList(id) {
+  viewMode='list';
+  document.querySelectorAll('.view-btn').forEach((b,i)=>b.classList.toggle('on',i===0));
+  openId=id; renderHome();
+}
+
+function renderHome(){
+  const container=document.getElementById('projList'), empty=document.getElementById('projEmpty');
+  container.innerHTML=''; populateSelects();
+  const qName=(document.getElementById('s-name')?.value||'').trim().toLowerCase();
+  const qAdv =(document.getElementById('s-adv')?.value||'').trim().toLowerCase();
+  const qRep =(document.getElementById('s-rep')?.value||'').trim().toLowerCase();
+  const qCat =(document.getElementById('s-cat')?.value||'').trim().toLowerCase();
+  const qDate=(document.getElementById('s-date')?.value||'').trim().toLowerCase();
+  let filtered = D.projects;
+  if (qName) filtered = filtered.filter(p=>p.name.toLowerCase().includes(qName));
+  if (qAdv)  filtered = filtered.filter(p=>(p.adv||'').toLowerCase().includes(qAdv));
+  if (qRep)  filtered = filtered.filter(p=>(p.rep||'').toLowerCase().includes(qRep));
+  if (qCat)  filtered = filtered.filter(p=>(p.cat||'').toLowerCase().includes(qCat));
+  if (qDate) filtered = filtered.filter(p=>fmtDate(p.createdAt).toLowerCase().includes(qDate));
+  if (curFilter !== 'all') filtered = filtered.filter(p=>p.status===curFilter);
+
+  if(viewMode==='kanban'){ renderKanban(filtered); return; }
+  document.getElementById('kanbanBoard').style.display='none';
+  document.getElementById('projList').style.display='';
+  const tableHead=document.querySelector('.proj-table-head'); if(tableHead) tableHead.style.display='';
+
+  if(!D.projects.length){empty.style.display='';return;} empty.style.display='none';
+  if(filtered.length===0){container.innerHTML=`<div class="empty-state">找不到符合的案件</div>`;return;}
+
+
+  filtered.forEach(p=>{
+    const h=totalHours(p); const isOpen=openId===p.id;
+    const statusLabel={ongoing:'進行中',done:'完成',paused:'暫停'}[p.status]||'—';
+    const makeH=(p.segments||[]).filter(s=>s.type!=='revision').reduce((a,s)=>a+segHours(s),0);
+    const revH=(p.segments||[]).filter(s=>s.type==='revision').reduce((a,s)=>a+segHours(s),0);
+    const segsHtml=(p.segments&&p.segments.length)?p.segments.map((seg,i)=>{
+      const isRev=seg.type==='revision';
+      return `<div class="segment-row">
+        <span class="stag ${isRev?'stag-rev':'stag-make'}">${isRev?'修改':'製作'}</span>
+        <span class="segment-label">${fmtSeg(seg)}</span>
+        <span class="segment-hrs">${segHours(seg).toFixed(1)}h</span>
+        <button class="btn-icon" onclick="event.stopPropagation();deleteSeg(${p.id},${i})">✕</button>
+      </div>`;
+    }).join(''):`<div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);padding:.4rem 0">尚無製作時間紀錄</div>`;
+
+    const hoursDetail=revH>0?`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:.15rem">製作 <span style="color:var(--accent)">${makeH.toFixed(1)}h</span> · 修改 ${revH.toFixed(1)}h</div>`:'';
+
+    const card=document.createElement('div'); card.className='proj-card';
+    const dateVal=new Date(p.createdAt); const dateStr=`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
+    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:2fr 90px 80px 90px 120px 85px 52px" onclick="toggleCard(${p.id})">
+        <div><div class="proj-card-name">${p.name}</div></div>
+        <div class="proj-meta-tag">${p.adv||'—'}</div>
+        <div class="proj-meta-tag">${p.rep||'—'}</div>
+        <div class="proj-meta-tag">${p.cat||'—'}</div>
+        <div class="proj-card-date">${fmtDate(p.createdAt)}</div>
+        <div><div class="proj-card-hours">${fmtH(h)}</div>${hoursDetail}</div>
+        <div onclick="event.stopPropagation()">
+          <select class="status-inline" style="${{ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888'}[p.status]||''}" onchange="saveField(${p.id},'status',this.value)">
+            <option value="ongoing" ${p.status==='ongoing'?'selected':''}>進行中</option>
+            <option value="done" ${p.status==='done'?'selected':''}>完成</option>
+            <option value="paused" ${p.status==='paused'?'selected':''}>暫停</option>
+          </select>
+        </div>
+        <div class="proj-card-actions" onclick="event.stopPropagation()">
+          <button class="btn-icon" onclick="openModal(${p.id})" title="編輯">✎</button>
+          <button class="btn-icon" onclick="copyProject(${p.id})" title="複製案件">⧉</button>
+          <button class="btn-icon" onclick="event.stopPropagation();deleteProject(${p.id})" title="刪除">✕</button>
+        </div>
+      </div>
+      <div class="proj-expand ${isOpen?'open':''}" id="exp-${p.id}">
+        <div class="detail-grid">
+          <div class="detail-field">
+            <label>專案預算</label>
+            <input class="detail-input" placeholder="如：50,000" value="${p.budget||''}" onchange="saveDetail(${p.id},'budget',this.value)">
+          </div>
+          <div class="detail-field">
+            <label>上線日期</label>
+            <input class="detail-input" type="date" value="${p.launchDate||''}" onchange="saveDetail(${p.id},'launchDate',this.value)">
+          </div>
+        </div>
+        <div style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)">
+          <div style="font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem">執行版位</div>
+          <div id="pl-rows-${p.id}">${renderPlRows(p)}</div>
+          <div class="pl-add-row" style="margin-top:0.6rem">
+            <div class="pl-ac-wrap" style="flex:1;position:relative">
+              <input class="pl-ac-input" id="pl-name-${p.id}" placeholder="搜尋或選擇版位" autocomplete="off"
+                oninput="plFilter(${p.id})" onfocus="plFilter(${p.id})" onkeydown="plKey(event,${p.id})">
+              <div class="ac-dropdown" id="pl-dd-${p.id}"></div>
+            </div>
+            <input class="pl-qty-input" id="pl-qty-${p.id}" type="number" min="1" value="1" style="width:60px">
+            <button class="btn btn-sm" onclick="addPlTag(${p.id})" style="align-self:flex-end;white-space:nowrap">＋ 新增版位</button>
+          </div>
+        </div>
+        <div class="detail-field" style="margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)">
+          <label style="font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.4rem">備註</label>
+          <textarea class="detail-textarea" placeholder="自由填寫備註…" onchange="saveDetail(${p.id},'note',this.value)">${p.note||''}</textarea>
+        </div>
+        <div class="expand-top">
+          <div><div class="expand-label">製作時間紀錄</div></div>
+          <div style="text-align:right">
+            <div class="expand-total">${fmtH(h)}</div>
+            <div class="expand-total-sub">總工時 · ${(p.segments||[]).length} 個時段${revH>0?' · 含修改 '+revH.toFixed(1)+'h':''}</div>
+          </div>
+        </div>
+        <div class="segments-list">${segsHtml}</div>
+        <div class="section-label" style="margin-bottom:.75rem">新增時段</div>
+        <div class="add-seg-row">
+          <div class="seg-field"><label>日期</label><div style="display:flex;gap:.4rem;align-items:center"><input type="date" id="sd-${p.id}"><button class="btn-ghost" style="font-size:0.55rem;padding:.2rem .5rem;white-space:nowrap" onclick="fillToday(${p.id})" title="填入今日">今天</button></div></div>
+          <div class="seg-field"><label>開始</label><input type="time" id="ss-${p.id}"></div>
+          <div class="seg-field"><label>結束</label><input type="time" id="se-${p.id}"></div>
+          <div class="seg-type-toggle" id="seg-type-${p.id}">
+            <button class="seg-type-btn st-active" data-type="make" onclick="setSegType(${p.id},'make',this)">製作</button>
+            <button class="seg-type-btn" data-type="revision" onclick="setSegType(${p.id},'revision',this)">修改</button>
+          </div>
+          <button class="btn btn-sm" onclick="addSeg(${p.id})" style="align-self:flex-end">＋ 新增時段</button>
+        </div>
+        <div class="seg-hint">可多次新增不同日期的時段，系統自動加總所有時段的工時</div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+/* MODAL */
+let editingId=null;
+function openModal(id){
+  const p=D.projects.find(p=>p.id===id); if(!p)return; editingId=id;
+  document.getElementById('m-name').value=p.name;
+  document.getElementById('m-status').value=p.status||'ongoing';
+  document.getElementById('m-cat').value=p.cat||'';
+  document.getElementById('m-adv').value=p.adv||'';
+  document.getElementById('m-rep').value=p.rep||'';
+  const d=new Date(p.createdAt);
+  document.getElementById('m-date').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('metaModal').classList.remove('hidden');
+}
+function closeModal(){
+  document.getElementById('metaModal').classList.add('hidden'); editingId=null;
+  ['cat','adv','rep'].forEach(t=>document.getElementById('m-dd-'+t)?.classList.remove('open'));
+}
+function saveModal(){
+  const p=D.projects.find(p=>p.id===editingId); if(!p)return;
+  p.name=document.getElementById('m-name').value.trim()||p.name;
+  p.cat=document.getElementById('m-cat').value.trim();
+  p.adv=document.getElementById('m-adv').value.trim();
+  p.rep=document.getElementById('m-rep').value.trim();
+  p.status=document.getElementById('m-status').value;
+  const dateVal=document.getElementById('m-date').value;
+  if(dateVal){ const d=new Date(dateVal+'T00:00:00'); if(!isNaN(d)) p.createdAt=d.getTime(); }
+  save(); closeModal(); openId=editingId; renderHome(); renderReview(); renderMonthly();
+}
+
+/* MODAL AUTOCOMPLETE */
+function modalItems(type){ return type==='cat'?D.categories:type==='adv'?D.advertisers:D.salesreps; }
+function acFilterModal(type){
+  const inp=document.getElementById('m-'+type);
+  const dd=document.getElementById('m-dd-'+type);
+  const q=(inp?.value||'').trim().toLowerCase();
+  const items=modalItems(type);
+  const filtered=q?items.filter(x=>x.toLowerCase().includes(q)):items;
+  dd.innerHTML=filtered.map(item=>`<div class="ac-item" onmousedown="acSelectModal('${type}','${item.replace(/'/g,"\\'")}')">${item}</div>`).join('');
+  const val=inp?.value.trim();
+  if(val && !items.includes(val)){
+    dd.innerHTML+=`<div class="ac-item" style="color:var(--accent)" onmousedown="acAddModal('${type}','${val.replace(/'/g,"\\'")}')">＋ 新增「${val}」</div>`;
+  } else if(!filtered.length){
+    dd.innerHTML=`<div class="ac-empty">尚無項目</div>`;
+  }
+  dd.classList.add('open');
+}
+function acSelectModal(type, val){
+  document.getElementById('m-'+type).value=val;
+  document.getElementById('m-dd-'+type).classList.remove('open');
+}
+function acAddModal(type, val){
+  if(!val) return;
+  const list=modalItems(type);
+  if(!list.includes(val)){ list.push(val); save(); }
+  document.getElementById('m-'+type).value=val;
+  document.getElementById('m-dd-'+type).classList.remove('open');
+}
+function acKeyModal(e, type){
+  if(e.key==='Escape'){ document.getElementById('m-dd-'+type)?.classList.remove('open'); }
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const val=document.getElementById('m-'+type)?.value.trim();
+    if(val) acAddModal(type, val);
+  }
+}
+document.getElementById('metaModal').addEventListener('click', e=>{
+  if(e.target===e.currentTarget) closeModal();
+  ['cat','adv','rep'].forEach(t=>{
+    const wrap=document.getElementById('m-'+t)?.closest('.ac-wrap');
+    if(wrap&&!wrap.contains(e.target)) document.getElementById('m-dd-'+t)?.classList.remove('open');
+  });
+});
+
+/* MONTHLY */
+let chartMetric='tasks';
+function calcMonthStats(y,m){ const created=D.projects.filter(p=>{const d=new Date(p.createdAt);return d.getFullYear()===y&&d.getMonth()+1===m;}); const hours=D.projects.reduce((sum,p)=>sum+(p.segments||[]).filter(seg=>{if(!seg.date)return false;const d=new Date(seg.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()+1===m;}).reduce((s,sg)=>s+segHours(sg),0),0); return{tasks:created.length,hours:Math.round(hours*10)/10,output:created.filter(p=>p.status==='done').length}; }
+function renderMonthly(){
+  const s=calcMonthStats(curYear,curMonth);
+  document.getElementById('val-tasks').textContent=s.tasks;
+  document.getElementById('val-hours').textContent=s.hours;
+  document.getElementById('val-output').textContent=s.output;
+  renderChart(chartMetric);
+  renderAdvRank();
+  renderRevRank();
+  renderRepRank();
+  renderAvgSummary();
+  
+}
+
+function renderAdvRank(){
+  const el=document.getElementById('advRank'); if(!el) return;
+  const map={};
+  D.projects.forEach(p=>{
+    const h=(p.segments||[]).filter(seg=>{if(!seg.date)return false;const d=new Date(seg.date+'T00:00:00');return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;}).reduce((s,sg)=>s+segHours(sg),0);
+    if(h>0){ const k=p.adv||'未指定'; map[k]=(map[k]||0)+h; }
+  });
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxH=sorted[0]?.[1]||1;
+  el.innerHTML=sorted.length?sorted.map(([name,h])=>`
+    <div class="rank-row">
+      <div class="rank-name">${name}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:${(h/maxH*100).toFixed(0)}%"></div></div>
+      <div class="rank-val">${h.toFixed(1)}h</div>
+    </div>`).join(''):`<div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)">本月無工時紀錄</div>`;
+}
+
+function renderRevRank(){
+  const el=document.getElementById('revRank'); if(!el) return;
+  const list=D.projects.map(p=>{
+    const makeH=(p.segments||[]).filter(s=>s.type!=='revision').reduce((a,s)=>a+segHours(s),0);
+    const revH=(p.segments||[]).filter(s=>s.type==='revision').reduce((a,s)=>a+segHours(s),0);
+    const total=makeH+revH;
+    return total>0?{name:p.name,pct:Math.round(revH/total*100),revH}:null;
+  }).filter(Boolean).sort((a,b)=>b.pct-a.pct).slice(0,6);
+  el.innerHTML=list.length?list.map(r=>`
+    <div class="rank-row">
+      <div class="rank-name">${r.name}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:${r.pct}%;${r.pct>=40?'background:#d04090':''}"></div></div>
+      <div class="rank-val${r.pct>=40?' warn':''}">${r.pct}%</div>
+    </div>`).join(''):`<div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)">尚無修改紀錄</div>`;
+}
+
+function renderRepRank(){
+  const el=document.getElementById('repRank'); if(!el) return;
+  const map={};
+  D.projects.filter(p=>{const d=new Date(p.createdAt);return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;})
+    .forEach(p=>{ const k=p.rep||'未指定'; map[k]=(map[k]||0)+1; });
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  const maxV=sorted[0]?.[1]||1;
+  el.innerHTML=sorted.length?sorted.map(([name,cnt])=>`
+    <div class="rank-row">
+      <div class="rank-name">${name}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:${(cnt/maxV*100).toFixed(0)}%"></div></div>
+      <div class="rank-val">${cnt} 件</div>
+    </div>`).join(''):`<div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)">本月無案件紀錄</div>`;
+}
+
+function renderAvgSummary(){
+  const sum=document.getElementById('avgSummary'); if(!sum) return;
+  const created=D.projects.filter(p=>{const d=new Date(p.createdAt);return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;});
+  const totalH=created.reduce((s,p)=>s+totalHours(p),0);
+  const thisAvg=created.length?+(totalH/created.length).toFixed(1):0;
+  const cnt=created.length;
+  const placementMap={};
+  created.forEach(p=>{ (p.placements||[]).forEach(t=>{ placementMap[t.name]=(placementMap[t.name]||0)+t.qty; }); });
+  const plRows=Object.entries(placementMap).sort((a,b)=>b[1]-a[1])
+    .map(([name,qty])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid var(--border)"><span style="font-size:.82rem">${name}</span><span style="font-family:'DM Mono',monospace;font-size:.75rem;color:var(--accent);font-weight:500">${qty} 支</span></div>`).join('');
+  sum.innerHTML=`
+    <div class="avg-num">${thisAvg||'—'}<span style="font-family:'DM Mono',monospace;font-size:1rem;color:var(--muted);margin-left:.25rem">h</span></div>
+    <div class="avg-sub" style="margin-bottom:1.25rem">平均每案工時 · 共 ${cnt} 個案件</div>
+    <div style="font-family:'DM Mono',monospace;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem">執行版位分佈（本月）</div>
+    ${plRows||'<div style="font-family:\'DM Mono\',monospace;font-size:.68rem;color:var(--muted)">本月無版位紀錄</div>'}`;
+}
+function switchChart(metric,btn){ chartMetric=metric; document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderChart(metric); }
+function renderChart(metric){ const el=document.getElementById('barChart'); el.innerHTML=''; const months=[]; for(let i=0;i<=11;i++){const d=new Date(curYear,curMonth-1-i,1);months.push({y:d.getFullYear(),m:d.getMonth()+1});} const vals=months.map(({y,m})=>calcMonthStats(y,m)[metric]); const maxV=Math.max(...vals,1); const cls={tasks:'bar-tasks',hours:'bar-hours',output:'bar-output'}[metric]; months.forEach(({m},i)=>{const pct=(vals[i]/maxV*100).toFixed(1);const row=document.createElement('div');row.className='bar-row';row.innerHTML=`<div class="bar-month">${m}月</div><div class="bar-track"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div><div class="bar-val">${vals[i]||'—'}</div>`;el.appendChild(row);}); }
+
+/* REVIEW */
+let openReviewId = null;
+
+function renderReview(){
+  document.getElementById('reviewTitle').textContent=`${curYear} 年 ${curMonth} 月回顧`;
+  const inMonth=p=>(p.segments||[]).some(seg=>{if(!seg.date)return false;const d=new Date(seg.date+'T00:00:00');return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;});
+  const createdThisMonth=p=>{const d=new Date(p.createdAt);return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;};
+  const monthH=p=>(p.segments||[]).filter(seg=>{if(!seg.date)return false;const d=new Date(seg.date+'T00:00:00');return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;}).reduce((s,sg)=>s+segHours(sg),0);
+  let projs=D.projects.filter(p=>inMonth(p)||createdThisMonth(p));
+  // apply filters
+  const rfName=(document.getElementById('rf-name')?.value||'').trim().toLowerCase();
+  const rfAdv =(document.getElementById('rf-adv')?.value||'').trim().toLowerCase();
+  const rfRep =(document.getElementById('rf-rep')?.value||'').trim().toLowerCase();
+  const rfCat =(document.getElementById('rf-cat')?.value||'').trim().toLowerCase();
+  if(rfName) projs=projs.filter(p=>p.name.toLowerCase().includes(rfName));
+  if(rfAdv)  projs=projs.filter(p=>(p.adv||'').toLowerCase().includes(rfAdv));
+  if(rfRep)  projs=projs.filter(p=>(p.rep||'').toLowerCase().includes(rfRep));
+  if(rfCat)  projs=projs.filter(p=>(p.cat||'').toLowerCase().includes(rfCat));
+  if(reviewStatusFilter!=='all') projs=projs.filter(p=>p.status===reviewStatusFilter);
+  // sort
+  projs.sort((a,b)=>{
+    if(reviewSort==='hours')  return monthH(b)-monthH(a);
+    if(reviewSort==='name')   return a.name.localeCompare(b.name,'zh');
+    if(reviewSort==='rep')    return (a.rep||'').localeCompare(b.rep||'','zh');
+    if(reviewSort==='launch') return (a.launchDate||'9999')>(b.launchDate||'9999')?1:-1;
+    return b.createdAt-a.createdAt;
+  });
+  const totalH=projs.reduce((s,p)=>s+monthH(p),0);
+  document.getElementById('reviewMeta').textContent=`共 ${projs.length} 個案件 · 本月工時 ${totalH.toFixed(1)} 小時`;
+  const el=document.getElementById('reviewContent');
+  if(!projs.length){el.innerHTML=`<div class="empty-state">本月尚無案件紀錄</div>`;return;}
+
+  let html=`<div class="review-card-head"><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>本月工時</span><span>狀態</span></div>`;
+
+  projs.forEach(p=>{
+    const h=monthH(p);
+    const statusLabel={ongoing:'進行中',done:'完成',paused:'暫停'}[p.status]||'—';
+    const isOpen=openReviewId===p.id;
+    const segs=(p.segments||[]).filter(seg=>{if(!seg.date)return false;const d=new Date(seg.date+'T00:00:00');return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;});
+    const segsHtml=segs.length ? segs.map(seg=>{
+      const isRev=seg.type==='revision';
+      return `<div class="segment-row"><span class="stag ${isRev?'stag-rev':'stag-make'}">${isRev?'修改':'製作'}</span><span class="segment-label">${fmtSeg(seg)}</span><span class="segment-hrs">${segHours(seg).toFixed(1)}h</span></div>`;
+    }).join('') : `<div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted)">本月無製作時段</div>`;
+
+    html+=`<div class="review-card">
+      <div class="review-card-main" data-pid="${p.id}">
+        <div style="font-size:.9rem">${p.name}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)">${p.adv||'—'}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)">${p.rep||'—'}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted)">${p.cat||'—'}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted)">${fmtDate(p.createdAt)}</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--accent)">${h>0?h.toFixed(1)+'h':'—'}</div>
+        <div><span class="badge badge-${p.status}">${statusLabel}</span></div>
+      </div>
+      <div class="review-expand ${isOpen?'open':''}">
+        <div class="review-detail-grid">
+          <div class="review-detail-item"><div class="review-detail-label">專案預算</div><div class="review-detail-val">${p.budget||'—'}</div></div>
+          <div class="review-detail-item"><div class="review-detail-label">上線日期</div><div class="review-detail-val">${p.launchDate||'—'}</div></div>
+          <div class="review-detail-item"><div class="review-detail-label">執行版位</div><div class="review-detail-val">${(p.placements&&p.placements.length)?p.placements.map(t=>`<div>${t.name}</div>`).join(''):'—'}</div></div>
+          <div class="review-detail-item"><div class="review-detail-label">需求數量</div><div class="review-detail-val">${(p.placements&&p.placements.length)?p.placements.map(t=>`<div>${t.qty}</div>`).join(''):'—'}</div></div>
+        </div>
+        ${p.note?`<div class="review-detail-label" style="margin-bottom:.4rem">備註</div><div class="review-note-box">${p.note}</div>`:''}
+        <div class="review-detail-label" style="margin-bottom:.6rem">本月製作時段</div>
+        <div class="review-segs">${segsHtml}</div>
+      </div>
+    </div>`;
+  });
+
+  html+=`<div class="review-total-bar"><span>本月合計　${projs.length} 個案件</span><span style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--accent)">${totalH.toFixed(1)}h</span></div>`;
+  el.innerHTML=html;
+  // re-attach expand click after innerHTML resets
+  el.querySelectorAll('.review-card-main').forEach(main=>{
+    const card=main.closest('.review-card');
+    const expand=card?.querySelector('.review-expand');
+    main.addEventListener('click',()=>{
+      const pid=parseInt(main.dataset.pid);
+      openReviewId=openReviewId===pid?null:pid;
+      el.querySelectorAll('.review-expand').forEach(e=>e.classList.remove('open'));
+      if(openReviewId===pid) expand?.classList.add('open');
+    });
+  });
+}
+
+/* CLEAR SEARCH */
+function clearSearch() {
+  ['s-name','s-adv','s-cat','s-date','s-rep'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  curFilter='all';
+  document.querySelectorAll('.search-form .filter-pill').forEach((b,i)=>b.classList.toggle('on',i===0));
+  renderHome();
+}
+
+/* EXPORT / IMPORT */
+
+/* REVIEW SORT */
+let reviewStatusFilter='all';
+function setReviewFilter(status, btn){
+  reviewStatusFilter=status;
+  document.querySelectorAll('.review-filter-form .filter-pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); renderReview();
+}
+function clearReviewFilter(){
+  reviewStatusFilter='all';
+  ['rf-name','rf-adv','rf-rep','rf-cat'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.querySelectorAll('.review-filter-form .filter-pill').forEach((b,i)=>b.classList.toggle('on',i===0));
+  renderReview();
+}
+
+let reviewSort='date';
+function setReviewSort(key, btn) {
+  reviewSort=key;
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderReview();
+}
+
+/* BACK TO TOP */
+window.addEventListener('scroll',()=>{
+  const btn=document.getElementById('backToTop');
+  if(btn) btn.classList.toggle('visible', window.scrollY>300);
+});
+
+initSelectors(); populateSelects(); renderHome(); renderMonthly(); renderReview(); renderCatList(); renderAdvList(); renderPlList();
+</script>
+</body>
+</html>
