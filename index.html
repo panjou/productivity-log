@@ -76,6 +76,7 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
 .badge-ongoing { background: #fad5ee; color: #c04090; }
 .badge-done { background: #e0e0e8; color: #555566; }
 .badge-paused { background: #ececec; color: #888888; }
+.badge-submitted { background: #d5eaf5; color: #2a7db5; }
 /* STATUS INLINE SELECT */
 .status-inline { border: none; outline: none; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.18rem 0.5rem; border-radius: 2px; background: #fad5ee; color: #c04090; transition: opacity 0.15s; appearance: none; -webkit-appearance: none; }
 .status-inline:hover { opacity: 0.8; }
@@ -303,6 +304,7 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
           <option value="ongoing">進行中</option>
           <option value="done">完成</option>
           <option value="paused">暫停</option>
+          <option value="submitted">已提交</option>
         </select>
       </div>
       <button class="btn" onclick="addProject()">＋ 新增</button>
@@ -327,11 +329,12 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
         <button class="filter-pill" onclick="setFilter('ongoing',this)">進行中</button>
         <button class="filter-pill" onclick="setFilter('done',this)">完成</button>
         <button class="filter-pill" onclick="setFilter('paused',this)">暫停</button>
+        <button class="filter-pill" onclick="setFilter('submitted',this)">已提交</button>
       </div>
     </div>
   </div>
-  <div class="proj-table-head" style="grid-template-columns:70px 80px 1.8fr 110px 80px 90px 120px 120px">
-    <span></span><span>狀態</span><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span>
+  <div class="proj-table-head" style="grid-template-columns:70px 80px 1.8fr 110px 80px 90px 120px 120px 100px">
+    <span></span><span>狀態</span><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span><span>預算</span>
   </div>
   <div id="projList"></div>
   <div id="kanbanBoard" style="display:none"></div>
@@ -349,10 +352,12 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
     </div>
   </div>
   <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-bottom:1.75rem;letter-spacing:0.08em">自動從專案紀錄統計 · 數據即時更新</div>
-  <div class="stats-row">
+  <div class="stats-row" style="grid-template-columns:repeat(5,1fr)">
     <div class="stat-card"><div class="stat-label">當月案件數</div><div class="stat-value" id="val-tasks">0</div><div class="stat-unit">projects created</div></div>
     <div class="stat-card"><div class="stat-label">當月製作工時</div><div class="stat-value" id="val-hours">0</div><div class="stat-unit">hours logged</div></div>
     <div class="stat-card"><div class="stat-label">完成案件數</div><div class="stat-value" id="val-output">0</div><div class="stat-unit">projects done</div></div>
+    <div class="stat-card"><div class="stat-label">製作預算合計</div><div class="stat-value" id="val-budget-all" style="font-size:1.8rem">—</div><div class="stat-unit">所有製作案件</div></div>
+    <div class="stat-card"><div class="stat-label">過案預算合計</div><div class="stat-value" id="val-budget-done" style="font-size:1.8rem">—</div><div class="stat-unit">已完成案件</div></div>
   </div>
   <div class="section-label">過去 12 個月趨勢</div>
   <div class="chart-toggle">
@@ -1050,7 +1055,7 @@ function saveField(id, field, value) {
   // update status select color instantly without full re-render
   if(field==='status'){
     const sel=event.target;
-    const colors={ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888'};
+    const colors={ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888',submitted:'background:#d5eaf5;color:#2a7db5'};
     sel.style.cssText=colors[value]||'';
   }
 }
@@ -1150,7 +1155,7 @@ function renderHome(){
 
   filtered.forEach(p=>{
     const h=totalHours(p); const isOpen=openId===p.id;
-    const statusLabel={ongoing:'進行中',done:'完成',paused:'暫停'}[p.status]||'—';
+    const statusLabel={ongoing:'進行中',done:'完成',paused:'暫停',submitted:'已提交'}[p.status]||'—';
     const makeH=(p.segments||[]).filter(s=>s.type!=='revision').reduce((a,s)=>a+segHours(s),0);
     const revH=(p.segments||[]).filter(s=>s.type==='revision').reduce((a,s)=>a+segHours(s),0);
     const segsHtml=(p.segments&&p.segments.length)?p.segments.map((seg,i)=>{
@@ -1163,21 +1168,22 @@ function renderHome(){
       </div>`;
     }).join(''):`<div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);padding:.4rem 0">尚無製作時間紀錄</div>`;
 
-    const hoursDetail=revH>0?`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:.15rem;white-space:nowrap">製作 <span style="color:var(--accent)">${makeH.toFixed(1)}h</span> · 修改 ${revH.toFixed(1)}h</div>`:'';
+    const hoursDetail=revH>0?`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:.25rem;line-height:1.8"><div>製作 <span style="color:var(--accent)">${makeH.toFixed(1)}h</span></div><div>修改 ${revH.toFixed(1)}h</div></div>`:'';
 
     const card=document.createElement('div'); card.className='proj-card';
     const dateVal=new Date(p.createdAt); const dateStr=`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
-    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:70px 80px 1.8fr 110px 80px 90px 120px 120px" onclick="toggleCard(${p.id})">
+    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:70px 80px 1.8fr 110px 80px 90px 120px 120px 100px" onclick="toggleCard(${p.id})">
         <div class="proj-card-actions" onclick="event.stopPropagation()">
           <button class="btn-icon" onclick="openModal(${p.id})" title="編輯">✎</button>
           <button class="btn-icon" onclick="copyProject(${p.id})" title="複製案件">⧉</button>
           <button class="btn-icon" onclick="event.stopPropagation();deleteProject(${p.id})" title="刪除">✕</button>
         </div>
         <div onclick="event.stopPropagation()">
-          <select class="status-inline" style="${{ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888'}[p.status]||''}" onchange="event.stopPropagation();saveField(${p.id},'status',this.value)" onclick="event.stopPropagation()">
+          <select class="status-inline" style="${{ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888',submitted:'background:#d5eaf5;color:#2a7db5'}[p.status]||''}" onchange="event.stopPropagation();saveField(${p.id},'status',this.value)" onclick="event.stopPropagation()">
             <option value="ongoing" ${p.status==='ongoing'?'selected':''}>進行中</option>
             <option value="done" ${p.status==='done'?'selected':''}>完成</option>
             <option value="paused" ${p.status==='paused'?'selected':''}>暫停</option>
+            <option value="submitted" ${p.status==='submitted'?'selected':''}>已提交</option>
           </select>
         </div>
         <div><div class="proj-card-name">${p.name}</div></div>
@@ -1186,6 +1192,7 @@ function renderHome(){
         <div class="proj-meta-tag">${p.cat||'—'}</div>
         <div class="proj-card-date">${fmtDate(p.createdAt)}</div>
         <div><div class="proj-card-hours">${fmtH(h)}</div>${hoursDetail}</div>
+        <div class="proj-meta-tag">${p.budget?'$'+p.budget:'—'}</div>
       </div>
       <div class="proj-expand ${isOpen?'open':''}" id="exp-${p.id}">
         <div class="detail-grid">
@@ -1321,12 +1328,19 @@ function renderMonthly(){
   document.getElementById('val-tasks').textContent=s.tasks;
   document.getElementById('val-hours').textContent=s.hours;
   document.getElementById('val-output').textContent=s.output;
+  // budget stats
+  const created=D.projects.filter(p=>{const d=new Date(p.createdAt);return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;});
+  const parseBudget=p=>{const n=parseFloat((p.budget||'').toString().replace(/,/g,''));return isNaN(n)?0:n;};
+  const budgetAll=created.reduce((s,p)=>s+parseBudget(p),0);
+  const budgetDone=created.filter(p=>p.status==='done'||p.status==='submitted').reduce((s,p)=>s+parseBudget(p),0);
+  const fmtB=n=>n>0?'$'+n.toLocaleString():'—';
+  const elA=document.getElementById('val-budget-all'); if(elA) elA.textContent=fmtB(budgetAll);
+  const elD=document.getElementById('val-budget-done'); if(elD) elD.textContent=fmtB(budgetDone);
   renderChart(chartMetric);
   renderAdvRank();
   renderRevRank();
   renderRepRank();
   renderAvgSummary();
-  
 }
 
 function renderAdvRank(){
@@ -1432,7 +1446,7 @@ function renderReview(){
 
   projs.forEach(p=>{
     const h=monthH(p);
-    const statusLabel={ongoing:'進行中',done:'完成',paused:'暫停'}[p.status]||'—';
+    const statusLabel={ongoing:'進行中',done:'完成',paused:'暫停',submitted:'已提交'}[p.status]||'—';
     const isOpen=openReviewId===p.id;
     const segs=(p.segments||[]).filter(seg=>{if(!seg.date)return false;const d=new Date(seg.date+'T00:00:00');return d.getFullYear()===curYear&&d.getMonth()+1===curMonth;});
     const segsHtml=segs.length ? segs.map(seg=>{
@@ -1464,7 +1478,16 @@ function renderReview(){
     </div>`;
   });
 
-  html+=`<div class="review-total-bar"><span>本月合計　${projs.length} 個案件</span><span style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--accent)">${totalH.toFixed(1)}h</span></div>`;
+  const parseBudget=p=>{const n=parseFloat((p.budget||'').toString().replace(/,/g,''));return isNaN(n)?0:n;};
+  const budgetAll=projs.reduce((s,p)=>s+parseBudget(p),0);
+  const budgetDone=projs.filter(p=>p.status==='done'||p.status==='submitted').reduce((s,p)=>s+parseBudget(p),0);
+  const fmtB=n=>n>0?'$'+n.toLocaleString():'—';
+  html+=`<div class="review-total-bar">
+    <span>本月合計　${projs.length} 個案件</span>
+    <span style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--accent)">${totalH.toFixed(1)}h</span>
+    <span>製作預算　<span style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--accent)">${fmtB(budgetAll)}</span></span>
+    <span>過案預算　<span style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--accent)">${fmtB(budgetDone)}</span></span>
+  </div>`;
   el.innerHTML=html;
   // re-attach expand click after innerHTML resets
   el.querySelectorAll('.review-card-main').forEach(main=>{
