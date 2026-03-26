@@ -152,7 +152,9 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
 /* PLACEMENT ROWS */
 .pl-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0.85rem; background: var(--cream); border: 1px solid var(--border); margin-bottom: 0.4rem; }
 .pl-row-name { font-size: 0.85rem; flex: 1; }
-.pl-row-qty-ctrl { display: flex; align-items: center; gap: 0.4rem; }
+.pl-row-right { display: flex; align-items: center; gap: 0.5rem; }
+.pl-qty-display { cursor: pointer; display: flex; align-items: baseline; gap: 0.15rem; padding: 0.1rem 0.3rem; border-radius: 2px; transition: background 0.15s; }
+.pl-qty-display:hover { background: var(--hover); }
 .pl-qty-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-size: 0.75rem; width: 22px; height: 22px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; line-height: 1; }
 .pl-qty-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .pl-row-qty { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: var(--accent); min-width: 24px; text-align: center; }
@@ -875,21 +877,45 @@ function renderPlRows(p) {
   return tags.map((t,i)=>`
     <div class="pl-row" id="pl-row-${p.id}-${i}">
       <span class="pl-row-name">${t.name}</span>
-      <div class="pl-row-qty-ctrl">
-        <button class="pl-qty-btn" onclick="adjustPlQty(${p.id},${i},-1)">−</button>
-        <span class="pl-row-qty">${t.qty}</span>
-        <button class="pl-qty-btn" onclick="adjustPlQty(${p.id},${i},1)">＋</button>
+      <div class="pl-row-right">
+        <div class="pl-qty-display" onclick="togglePlEdit(${p.id},${i})">
+          <span style="font-family:'DM Serif Display',serif;font-size:1rem;color:var(--accent)">${t.qty}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"> 支</span>
+        </div>
+        <div class="pl-qty-edit" style="display:none">
+          <button class="pl-qty-btn" onclick="adjustPlQty(${p.id},${i},-1)">−</button>
+          <span class="pl-row-qty">${t.qty}</span>
+          <button class="pl-qty-btn" onclick="adjustPlQty(${p.id},${i},1)">＋</button>
+          <button class="pl-qty-btn" onclick="togglePlEdit(${p.id},${i})" style="font-size:0.65rem;padding:0 .3rem">完成</button>
+        </div>
+        <button class="pl-tag-del" onclick="removePlTag(${p.id},${i})">✕</button>
       </div>
-      <span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)">${t.qty} 支</span>
-      <button class="pl-tag-del" onclick="removePlTag(${p.id},${i})">✕</button>
     </div>`).join('');
+}
+
+function togglePlEdit(projId, idx) {
+  const row = document.getElementById(`pl-row-${projId}-${idx}`);
+  if (!row) return;
+  const display = row.querySelector('.pl-qty-display');
+  const edit = row.querySelector('.pl-qty-edit');
+  const isEditing = edit.style.display !== 'none';
+  display.style.display = isEditing ? '' : 'none';
+  edit.style.display = isEditing ? 'none' : 'flex';
 }
 
 function adjustPlQty(projId, idx, delta) {
   const p=D.projects.find(p=>p.id===projId); if(!p||!p.placements?.[idx]) return;
   p.placements[idx].qty=Math.max(1, p.placements[idx].qty+delta);
-  save();
-  const el=document.getElementById(`pl-rows-${projId}`); if(el) el.innerHTML=renderPlRows(p);
+  save(p);
+  // update display in place
+  const row=document.getElementById(`pl-row-${projId}-${idx}`);
+  if(row){
+    const qty=p.placements[idx].qty;
+    const disp=row.querySelector('.pl-qty-display');
+    if(disp) disp.innerHTML=`<span style="font-family:'DM Serif Display',serif;font-size:1rem;color:var(--accent)">${qty}</span><span style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted)"> 支</span>`;
+    const qtySpan=row.querySelector('.pl-row-qty');
+    if(qtySpan) qtySpan.textContent=qty;
+  }
   renderMonthly();
 }
 
@@ -1137,7 +1163,7 @@ function renderHome(){
       </div>`;
     }).join(''):`<div style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);padding:.4rem 0">尚無製作時間紀錄</div>`;
 
-    const hoursDetail=revH>0?`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:.15rem">製作 <span style="color:var(--accent)">${makeH.toFixed(1)}h</span> · 修改 ${revH.toFixed(1)}h</div>`:'';
+    const hoursDetail=revH>0?`<div style="font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);margin-top:.15rem;white-space:nowrap">製作 <span style="color:var(--accent)">${makeH.toFixed(1)}h</span> · 修改 ${revH.toFixed(1)}h</div>`:'';
 
     const card=document.createElement('div'); card.className='proj-card';
     const dateVal=new Date(p.createdAt); const dateStr=`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
