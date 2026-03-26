@@ -54,10 +54,10 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
 .add-form { background: var(--cream); border: 1px solid var(--border); padding: 1.75rem 2rem; margin-bottom: 2.5rem; }
 .add-form-title { font-family: 'DM Serif Display', serif; font-size: 1.15rem; margin-bottom: 1.25rem; }
 .add-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; }
-.proj-table-head { display: grid; grid-template-columns: 52px 2fr 100px 100px 120px 90px 75px; background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 1.25rem; gap: 1rem; align-items: center; }
+.proj-table-head { display: grid; grid-template-columns: 70px 2fr 100px 100px 120px 90px 75px; background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 1.25rem; gap: 1rem; align-items: center; }
 .proj-card { background: var(--paper); border-left: 3px solid transparent; border-bottom: 1px solid var(--border); transition: background 0.18s, border-left-color 0.18s; }
 .proj-card:hover { background: var(--hover); border-left-color: var(--accent); }
-.proj-card-main { display: grid; grid-template-columns: 52px 2fr 100px 100px 120px 90px 75px; align-items: center; padding: 1rem 1.25rem; gap: 1rem; cursor: pointer; }
+.proj-card-main { display: grid; grid-template-columns: 70px 2fr 100px 100px 120px 90px 75px; align-items: center; padding: 1rem 1.25rem; gap: 1rem; cursor: pointer; }
 /* SEARCH FORM */
 .search-form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr; gap: 1rem; align-items: end; background: var(--cream); border: 1px solid var(--border); border-bottom: none; padding: 0.85rem 1.25rem; }
 .search-field { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -328,7 +328,7 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
       </div>
     </div>
   </div>
-  <div class="proj-table-head" style="grid-template-columns:52px 2fr 90px 80px 90px 120px 85px">
+  <div class="proj-table-head" style="grid-template-columns:70px 2fr 90px 80px 90px 120px 85px">
     <span></span><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span><span>狀態</span>
   </div>
   <div id="projList"></div>
@@ -1141,7 +1141,7 @@ function renderHome(){
 
     const card=document.createElement('div'); card.className='proj-card';
     const dateVal=new Date(p.createdAt); const dateStr=`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
-    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:52px 2fr 90px 80px 90px 120px 85px" onclick="toggleCard(${p.id})">
+    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:70px 2fr 90px 80px 90px 120px 85px" onclick="toggleCard(${p.id})">
         <div class="proj-card-actions" onclick="event.stopPropagation()">
           <button class="btn-icon" onclick="openModal(${p.id})" title="編輯">✎</button>
           <button class="btn-icon" onclick="copyProject(${p.id})" title="複製案件">⧉</button>
