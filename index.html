@@ -579,40 +579,31 @@ function showSyncStatus(msg, ok=true) {
   el._t = setTimeout(() => el.style.opacity = '0', 2500);
 }
 
-async function apiGet(params='') {
-  const url = API + (params ? '?' + params : '');
-  const res = await fetch(url, { redirect: 'follow' });
-  return res.json();
-}
-
-async function apiPost(body) {
-  const res = await fetch(API, {
-    method: 'POST',
-    redirect: 'follow',
-    body: JSON.stringify(body)
-  });
+async function apiCall(params) {
+  const url = API + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
   return res.json();
 }
 
 async function pushProject(project) {
   try {
-    await apiPost({ action: 'save', project });
+    await apiCall({ action: 'save', project: encodeURIComponent(JSON.stringify(project)) });
     showSyncStatus('✓ 已同步');
   } catch(e) { showSyncStatus('⚠ 同步失敗', false); }
 }
 
 async function deleteFromSheets(id) {
-  try { await apiPost({ action: 'delete', id }); } catch {}
+  try { await apiCall({ action: 'delete', id }); } catch {}
 }
 
 async function pushMeta() {
   try {
-    await apiPost({ action: 'saveMeta', meta: {
+    await apiCall({ action: 'saveMeta', meta: encodeURIComponent(JSON.stringify({
       categories: D.categories,
       advertisers: D.advertisers,
       placements: D.placements,
       salesreps: D.salesreps
-    }});
+    }))});
   } catch {}
 }
 
@@ -625,7 +616,7 @@ function save(project=null) {
 async function loadFromSheets() {
   showSyncStatus('⟳ 載入中…', true);
   try {
-    const json = await apiGet();
+    const json = await apiCall({ action: 'getData' });
     if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
       D.projects = json.data.map(row => ({
         ...row,
@@ -636,7 +627,7 @@ async function loadFromSheets() {
       }));
       saveLocal();
     }
-    const metaJson = await apiGet('action=getMeta');
+    const metaJson = await apiCall({ action: 'getMeta' });
     if (metaJson.ok && metaJson.meta) {
       const m = metaJson.meta;
       if (m.categories?.length)  D.categories  = m.categories;
