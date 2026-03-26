@@ -54,10 +54,10 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
 .add-form { background: var(--cream); border: 1px solid var(--border); padding: 1.75rem 2rem; margin-bottom: 2.5rem; }
 .add-form-title { font-family: 'DM Serif Display', serif; font-size: 1.15rem; margin-bottom: 1.25rem; }
 .add-form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; }
-.proj-table-head { display: grid; grid-template-columns: 2fr 100px 100px 120px 90px 75px 52px; background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 1.25rem; gap: 1rem; align-items: center; }
+.proj-table-head { display: grid; grid-template-columns: 52px 2fr 100px 100px 120px 90px 75px; background: #333333; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.65rem 1.25rem; gap: 1rem; align-items: center; }
 .proj-card { background: var(--paper); border-left: 3px solid transparent; border-bottom: 1px solid var(--border); transition: background 0.18s, border-left-color 0.18s; }
 .proj-card:hover { background: var(--hover); border-left-color: var(--accent); }
-.proj-card-main { display: grid; grid-template-columns: 2fr 100px 100px 120px 90px 75px 52px; align-items: center; padding: 1rem 1.25rem; gap: 1rem; cursor: pointer; }
+.proj-card-main { display: grid; grid-template-columns: 52px 2fr 100px 100px 120px 90px 75px; align-items: center; padding: 1rem 1.25rem; gap: 1rem; cursor: pointer; }
 /* SEARCH FORM */
 .search-form { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr; gap: 1rem; align-items: end; background: var(--cream); border: 1px solid var(--border); border-bottom: none; padding: 0.85rem 1.25rem; }
 .search-field { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -328,8 +328,8 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
       </div>
     </div>
   </div>
-  <div class="proj-table-head" style="grid-template-columns:2fr 90px 80px 90px 120px 85px 52px">
-    <span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span><span>狀態</span><span></span>
+  <div class="proj-table-head" style="grid-template-columns:52px 2fr 90px 80px 90px 120px 85px">
+    <span></span><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span><span>狀態</span>
   </div>
   <div id="projList"></div>
   <div id="kanbanBoard" style="display:none"></div>
@@ -561,10 +561,8 @@ if (!D.advertisers) D.advertisers = [];
 if (!D.placements)  D.placements  = ['IG','FB','YouTube','TikTok','LINE','官網'];
 if (!D.salesreps)   D.salesreps   = [];
 
-/* 本地儲存 */
 function saveLocal() { localStorage.setItem('wt-v4', JSON.stringify(D)); }
 
-/* 同步狀態指示 */
 function showSyncStatus(msg, ok=true) {
   let el = document.getElementById('syncStatus');
   if (!el) {
@@ -581,56 +579,54 @@ function showSyncStatus(msg, ok=true) {
   el._t = setTimeout(() => el.style.opacity = '0', 2500);
 }
 
-/* 推送單一專案到 Sheets */
+async function apiGet(params='') {
+  const url = API + (params ? '?' + params : '');
+  const res = await fetch(url, { redirect: 'follow' });
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(API, {
+    method: 'POST',
+    redirect: 'follow',
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
 async function pushProject(project) {
   try {
-    await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'save', project })
-    });
+    await apiPost({ action: 'save', project });
     showSyncStatus('✓ 已同步');
-  } catch { showSyncStatus('⚠ 同步失敗', false); }
+  } catch(e) { showSyncStatus('⚠ 同步失敗', false); }
 }
 
-/* 從 Sheets 刪除專案 */
 async function deleteFromSheets(id) {
-  try {
-    await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'delete', id })
-    });
-  } catch {}
+  try { await apiPost({ action: 'delete', id }); } catch {}
 }
 
-/* 同步 meta（categories / advertisers / placements / salesreps）*/
 async function pushMeta() {
   try {
-    await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveMeta', meta: {
-        categories: D.categories,
-        advertisers: D.advertisers,
-        placements: D.placements,
-        salesreps: D.salesreps
-      }})
-    });
+    await apiPost({ action: 'saveMeta', meta: {
+      categories: D.categories,
+      advertisers: D.advertisers,
+      placements: D.placements,
+      salesreps: D.salesreps
+    }});
   } catch {}
 }
 
-/* 主要 save 函式 — 本地 + 雲端 */
 function save(project=null) {
   saveLocal();
-  if (project) { pushProject(project); }
+  if (project) pushProject(project);
   pushMeta();
 }
 
-/* 初始載入：優先從 Sheets 拉資料 */
 async function loadFromSheets() {
   showSyncStatus('⟳ 載入中…', true);
   try {
-    const res = await fetch(API);
-    const json = await res.json();
-    if (json.ok && json.data.length > 0) {
+    const json = await apiGet();
+    if (json.ok && Array.isArray(json.data) && json.data.length > 0) {
       D.projects = json.data.map(row => ({
         ...row,
         id: Number(row.id),
@@ -640,12 +636,7 @@ async function loadFromSheets() {
       }));
       saveLocal();
     }
-    // load meta
-    const metaRes = await fetch(API, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'getMeta' })
-    });
-    const metaJson = await metaRes.json();
+    const metaJson = await apiGet('action=getMeta');
     if (metaJson.ok && metaJson.meta) {
       const m = metaJson.meta;
       if (m.categories?.length)  D.categories  = m.categories;
@@ -655,7 +646,7 @@ async function loadFromSheets() {
       saveLocal();
     }
     showSyncStatus('✓ 資料已載入');
-  } catch {
+  } catch(e) {
     showSyncStatus('⚠ 無法連線，使用本地資料', false);
   }
   renderHome(); renderMonthly(); renderReview(); renderCatList(); renderAdvList(); renderPlList();
@@ -1159,7 +1150,12 @@ function renderHome(){
 
     const card=document.createElement('div'); card.className='proj-card';
     const dateVal=new Date(p.createdAt); const dateStr=`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
-    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:2fr 90px 80px 90px 120px 85px 52px" onclick="toggleCard(${p.id})">
+    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:52px 2fr 90px 80px 90px 120px 85px" onclick="toggleCard(${p.id})">
+        <div class="proj-card-actions" onclick="event.stopPropagation()">
+          <button class="btn-icon" onclick="openModal(${p.id})" title="編輯">✎</button>
+          <button class="btn-icon" onclick="copyProject(${p.id})" title="複製案件">⧉</button>
+          <button class="btn-icon" onclick="event.stopPropagation();deleteProject(${p.id})" title="刪除">✕</button>
+        </div>
         <div><div class="proj-card-name">${p.name}</div></div>
         <div class="proj-meta-tag">${p.adv||'—'}</div>
         <div class="proj-meta-tag">${p.rep||'—'}</div>
@@ -1172,11 +1168,6 @@ function renderHome(){
             <option value="done" ${p.status==='done'?'selected':''}>完成</option>
             <option value="paused" ${p.status==='paused'?'selected':''}>暫停</option>
           </select>
-        </div>
-        <div class="proj-card-actions" onclick="event.stopPropagation()">
-          <button class="btn-icon" onclick="openModal(${p.id})" title="編輯">✎</button>
-          <button class="btn-icon" onclick="copyProject(${p.id})" title="複製案件">⧉</button>
-          <button class="btn-icon" onclick="event.stopPropagation();deleteProject(${p.id})" title="刪除">✕</button>
         </div>
       </div>
       <div class="proj-expand ${isOpen?'open':''}" id="exp-${p.id}">
