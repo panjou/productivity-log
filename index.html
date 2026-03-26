@@ -328,8 +328,8 @@ header { padding: 2.5rem 0 2rem; border-bottom: 1px solid var(--border); display
       </div>
     </div>
   </div>
-  <div class="proj-table-head" style="grid-template-columns:70px 2fr 90px 80px 90px 120px 85px">
-    <span></span><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span><span>狀態</span>
+  <div class="proj-table-head" style="grid-template-columns:70px 80px 2fr 110px 90px 100px 130px 100px">
+    <span></span><span>狀態</span><span>案件名稱</span><span>廣告主</span><span>業務</span><span>類別</span><span>建立日期</span><span>製作工時</span>
   </div>
   <div id="projList"></div>
   <div id="kanbanBoard" style="display:none"></div>
@@ -1141,11 +1141,18 @@ function renderHome(){
 
     const card=document.createElement('div'); card.className='proj-card';
     const dateVal=new Date(p.createdAt); const dateStr=`${dateVal.getFullYear()}-${String(dateVal.getMonth()+1).padStart(2,'0')}-${String(dateVal.getDate()).padStart(2,'0')}`;
-    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:70px 2fr 90px 80px 90px 120px 85px" onclick="toggleCard(${p.id})">
+    card.innerHTML=`<div class="proj-card-main" style="grid-template-columns:70px 80px 2fr 110px 90px 100px 130px 100px" onclick="toggleCard(${p.id})">
         <div class="proj-card-actions" onclick="event.stopPropagation()">
           <button class="btn-icon" onclick="openModal(${p.id})" title="編輯">✎</button>
           <button class="btn-icon" onclick="copyProject(${p.id})" title="複製案件">⧉</button>
           <button class="btn-icon" onclick="event.stopPropagation();deleteProject(${p.id})" title="刪除">✕</button>
+        </div>
+        <div onclick="event.stopPropagation()">
+          <select class="status-inline" style="${{ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888'}[p.status]||''}" onchange="event.stopPropagation();saveField(${p.id},'status',this.value)" onclick="event.stopPropagation()">
+            <option value="ongoing" ${p.status==='ongoing'?'selected':''}>進行中</option>
+            <option value="done" ${p.status==='done'?'selected':''}>完成</option>
+            <option value="paused" ${p.status==='paused'?'selected':''}>暫停</option>
+          </select>
         </div>
         <div><div class="proj-card-name">${p.name}</div></div>
         <div class="proj-meta-tag">${p.adv||'—'}</div>
@@ -1153,13 +1160,6 @@ function renderHome(){
         <div class="proj-meta-tag">${p.cat||'—'}</div>
         <div class="proj-card-date">${fmtDate(p.createdAt)}</div>
         <div><div class="proj-card-hours">${fmtH(h)}</div>${hoursDetail}</div>
-        <div onclick="event.stopPropagation()">
-          <select class="status-inline" style="${{ongoing:'background:#fad5ee;color:#c04090',done:'background:#e0e0e8;color:#555566',paused:'background:#ececec;color:#888888'}[p.status]||''}" onchange="saveField(${p.id},'status',this.value)">
-            <option value="ongoing" ${p.status==='ongoing'?'selected':''}>進行中</option>
-            <option value="done" ${p.status==='done'?'selected':''}>完成</option>
-            <option value="paused" ${p.status==='paused'?'selected':''}>暫停</option>
-          </select>
-        </div>
       </div>
       <div class="proj-expand ${isOpen?'open':''}" id="exp-${p.id}">
         <div class="detail-grid">
